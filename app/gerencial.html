@@ -3,19 +3,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Visão Gerencial | Auto Visão</title>
+<meta name="description" content="Painel comercial da Auto Visão Vistorias Automotivas: receita, metas, clientes e vistoriadores em um só lugar.">
+<meta name="theme-color" content="#1A1A1A">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Auto Visão · BI de Vendas">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:title" content="Visão Gerencial | Auto Visão">
+<meta property="og:description" content="Painel comercial da Auto Visão Vistorias Automotivas: receita, metas, clientes e vistoriadores em um só lugar.">
+<meta property="og:url" content="https://bi.autovisao.com/gerencial">
+<meta property="og:image" content="https://bi.autovisao.com/og-banner.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Auto Visão · BI de Vendas">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://bi.autovisao.com/og-banner.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%231A1A1A%22/%3E%3Ccircle cx=%2228%22 cy=%2228%22 r=%2215%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%227%22/%3E%3Ccircle cx=%2228%22 cy=%2228%22 r=%226%22 fill=%22%23F20C1F%22/%3E%3Cpath d=%22M39 39l11 11%22 stroke=%22%23fff%22 stroke-width=%227%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/design-system.css">
 <style>
-*{box-sizing:border-box}body{margin:0}main{padding:24px}.view-nav{display:flex;flex-wrap:wrap;align-items:flex-end;gap:3px;padding:5px 7px 0;background:#e6e6e6;border-radius:11px 11px 0 0;border-bottom:1px solid #cecece}.view-nav a{position:relative;display:inline-flex;align-items:center;min-height:41px;margin-bottom:-1px;padding:7px 15px;border:1px solid transparent;border-radius:10px 10px 0 0;color:var(--av-gray);font:800 clamp(15px,2vw,19px) var(--av-font-title);text-decoration:none}.view-nav a:hover{background:#f0f0f0;color:var(--av-black)}.view-nav a[aria-current=page]{background:white;color:var(--av-black);border-color:#cecece;border-bottom-color:white;box-shadow:inset 0 2px var(--av-red-deep)}@media print{.view-nav{display:none}}.heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}.heading img{width:clamp(90px,15vw,170px);height:auto}h1{margin:0;font-size:clamp(24px,3vw,36px)}h2{margin:0;font-size:17px}.filters,.stats{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.filters label{display:grid;gap:4px;font-weight:800;font-size:13px}.filters select,.filters input,.filters button{min-height:40px;border:1px solid var(--av-line);border-radius:8px;background:#fff;padding:6px 9px;max-width:min(390px,85vw)}.filters button{align-self:end;cursor:pointer}.stats span{background:white;border:1px solid var(--av-line);border-radius:7px;padding:6px 9px;font-size:13px}.charts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{background:white;border:1px solid var(--av-line);border-radius:12px;padding:12px;min-width:0}.card svg{display:block;width:100%;height:auto}.card svg text{fill:#444;font:11px var(--av-font-body)}.card svg .value{font-weight:800;fill:#101010}@media(max-width:1100px){.charts{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){main{padding:12px}.charts{grid-template-columns:1fr}.view-nav a{padding-inline:6px;font-size:13px}}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}main{padding:0}.view-nav,.filters,#status{display:none}.charts{grid-template-columns:repeat(4,minmax(0,1fr))}.card{break-inside:avoid}}
+*{box-sizing:border-box}body{margin:0}main{padding:24px}.heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}.heading img{width:clamp(90px,15vw,170px);height:auto}h1{margin:0;font-size:clamp(24px,3vw,36px)}h2{margin:0;font-size:17px}.filters,.stats{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.filters label{display:grid;gap:4px;font-weight:800;font-size:13px}.filters select,.filters input,.filters button{min-height:40px;border:1px solid var(--av-line);border-radius:8px;background:#fff;padding:6px 9px;max-width:min(390px,85vw)}.filters button{align-self:end;cursor:pointer}.stats span{background:white;border:1px solid var(--av-line);border-radius:7px;padding:6px 9px;font-size:13px}.charts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{background:white;border:1px solid var(--av-line);border-radius:12px;padding:12px;min-width:0}.card svg{display:block;width:100%;height:auto}.card svg text{fill:#444;font:11px var(--av-font-body)}.card svg .value{font-weight:800;fill:#101010}@media(max-width:1100px){.charts{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){main{padding:12px}.charts{grid-template-columns:1fr}}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}main{padding:0}.view-nav,.filters,#status{display:none}.charts{grid-template-columns:repeat(4,minmax(0,1fr))}.card{break-inside:avoid}}
 .chips{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}.chips:empty,#status:empty{display:none}.chips button{min-height:32px;border:1px solid #e7bcbc;border-radius:8px;background:#fff3f3;color:#871414;font-weight:800;padding:4px 9px;cursor:pointer}.context{color:var(--av-gray);font-size:13px;margin:8px 0 14px}.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}.chart-group{min-width:0}.chart-group:first-child{grid-column:1/-1}.chart-group>h2{font-size:19px;margin:0 0 7px}.group-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chart-group:first-child .group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.card{padding:14px}.card h3{margin:0;font-size:16px}.card svg{max-height:220px}.card svg text{font-size:12px}
 @media(max-width:1000px){.charts{grid-template-columns:1fr}}
 @media(max-width:560px){.group-grid,.chart-group:first-child .group-grid{grid-template-columns:1fr}}
 @media print{.chips button{min-height:0;background:white;color:#101010;border-color:#ddd;cursor:default}.chips .remove-mark{display:none}.charts{grid-template-columns:1fr 1fr}.group-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-group:first-child .group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.card svg{max-height:120px}}
 .charts{grid-template-columns:minmax(0,1fr)}.chart-group:first-child{grid-column:auto}.group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.chart-group{--group-color:#bf1515}.chart-group.transferencia{--group-color:#1749a3}.chart-group.cautelar{--group-color:#007455}
+.chart-group{--group-color:var(--av-series-1)}.chart-group.transferencia{--group-color:var(--av-series-2)}.chart-group.cautelar{--group-color:var(--av-series-3)}
 .chart-group>h2{border-left:4px solid var(--group-color);padding-left:8px}.chart-group .card{border-top:3px solid var(--group-color)}
 @media screen and (max-width:560px){.chart-group .group-grid{grid-template-columns:1fr}}
 @media print{.charts{grid-template-columns:1fr}.group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.card{print-color-adjust:exact}.card svg{max-height:105px}}
-.time-filters{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0}.time-filters fieldset{margin:0;padding:0;border:0;min-width:0}.time-filters legend{font-weight:800;font-size:13px;margin-bottom:5px}.time-options{display:flex;flex-wrap:wrap;gap:4px}.time-option{position:relative}.time-option input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}.time-option span{display:grid;place-items:center;min-width:40px;min-height:40px;padding:4px;border:1px solid var(--av-line);border-radius:7px;background:white;font-size:13px}.time-option input:checked+span{background:var(--av-red-deep);border-color:var(--av-red-deep);color:white;font-weight:800}.time-option input:focus-visible+span{outline:3px solid var(--av-black);outline-offset:1px}.chart-scroll{overflow-x:auto}
+.time-filters{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0}.time-filters fieldset{margin:0;padding:0;border:0;min-width:0}.time-filters legend{font-weight:800;font-size:13px;margin-bottom:5px}.time-options{display:flex;flex-wrap:wrap;gap:4px}.time-option{position:relative}.time-option input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}.time-option span{display:grid;place-items:center;min-width:40px;min-height:40px;padding:4px;border:1px solid var(--av-line);border-radius:7px;background:white;font-size:13px}.time-option input:checked+span{background:var(--av-red);border-color:var(--av-red);color:white;font-weight:800}.time-option input:focus-visible+span{outline:3px solid var(--av-black);outline-offset:1px}.chart-scroll{overflow-x:auto}
 @media print{.chart-scroll{overflow:visible}.chart-scroll svg{min-width:0!important}}
 .searchable-filter{min-width:0;max-width:100%;width:100%;min-height:40px;padding:6px 9px;border:1px solid var(--av-line);border-radius:8px;background:white;color:var(--av-black)}
 .gerencial-header{position:sticky;top:0;z-index:2;background:var(--av-offwhite);border-bottom:3px solid var(--av-red);margin-top:-24px;padding-top:24px}
@@ -34,7 +49,7 @@
 <main>
 <header class="gerencial-header">
 <nav class="view-nav" aria-label="Visões do BI">
-<a href="/">Visão Geral</a><a href="/relatorio-cliente">Visão por Cliente</a><a href="/gerencial" aria-current="page">Visão Gerencial</a><a href="/vistoriadores">Visão por Vistoriadores</a><a href="/speed">Speed Diário</a>
+<a href="/">Visão Geral</a><a href="/relatorio-cliente">Visão por Cliente</a><a href="/gerencial" aria-current="page">Visão Gerencial</a><a href="/vistoriadores">Visão por Vistoriadores</a><a href="/speed">Speed Diário</a><a href="/logout" class="nav-sair">Sair</a>
 </nav>
 <div class="heading"><h1>Visão Gerencial</h1><img src="/logo-auto-visao.png" alt="Auto Visão Vistorias Automotivas"></div>
 <div id="filtros-ativos" class="chips" aria-label="Filtros ativos"></div>
@@ -56,7 +71,9 @@
 </form>
 <p id="status" role="status"></p>
 <section class="charts" id="charts" aria-label="Indicadores gerenciais"></section>
+<footer class="av-footer"><strong>auto<span>visão</span> · BI de Vendas</strong><span>Uso interno · Vistorias Automotivas</span></footer>
 </main>
+<script src="/sessao.js"></script>
 <script src="/filtros.js"></script>
 <script src="/graficos_vistoriadores.js"></script>
 <script>

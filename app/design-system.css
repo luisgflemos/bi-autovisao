@@ -4,3 +4,43 @@ html{color-scheme:light}body{font-family:var(--av-font-body);font-weight:400;col
 h1,h2,h3,h4{font-family:var(--av-font-title);font-weight:900;color:var(--av-graphite)}
 button,input,select,textarea{font-family:var(--av-font-body)}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--av-black)!important;outline-offset:3px}
+
+/* ===== Identidade Auto Visão: camada compartilhada por todas as telas ===== */
+:root{--av-logo-dark:#373435;--av-red-soft:#FDECEE;--av-red-line:#F3B9BE;--av-gray-mid:#9A9A9A;--av-gray-light:#C9C9C9;
+--av-series-1:var(--av-red-deep);--av-series-2:var(--av-logo-dark);--av-series-3:var(--av-gray);--av-series-4:var(--av-red);
+--av-shadow:0 1px 2px rgba(16,16,16,.06),0 4px 14px rgba(16,16,16,.05)}
+body{background:var(--av-offwhite);-webkit-font-smoothing:antialiased}
+::selection{background:var(--av-red);color:var(--av-white)}
+a{color:var(--av-red-deep)}
+
+/* Barra de navegação entre as visões */
+.view-nav{display:flex;flex-wrap:wrap;align-items:stretch;gap:2px;padding:0 10px;background:var(--av-graphite);border-radius:var(--av-radius);border:0;box-shadow:var(--av-shadow)}
+.view-nav::before{content:"";flex:none;align-self:center;width:12px;height:12px;margin:0 10px 0 4px;border-radius:50%;background:var(--av-red);box-shadow:0 0 0 4px rgba(242,12,31,.25)}
+.view-nav a{position:relative;display:inline-flex;align-items:center;min-height:50px;margin:0;padding:8px 14px;border:0;border-radius:0;color:rgba(255,255,255,.72);font:600 clamp(13px,1.35vw,15px) var(--av-font-action);letter-spacing:.01em;text-decoration:none;transition:color .15s}
+.view-nav a::after{content:"";position:absolute;left:14px;right:14px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:transparent;transition:background .15s}
+.view-nav a:hover{background:transparent;color:var(--av-white)}
+.view-nav a:hover::after{background:rgba(255,255,255,.35)}
+.view-nav a[aria-current=page]{background:transparent;color:var(--av-white);box-shadow:none}
+.view-nav a[aria-current=page]::after{background:var(--av-red)}
+.view-nav a:focus-visible{outline-color:var(--av-white)!important;outline-offset:-3px}
+@media(max-width:560px){.view-nav{padding:0 4px}.view-nav::before{display:none}.view-nav a{padding-inline:8px;font-size:12px;min-height:44px}.view-nav a::after{left:8px;right:8px}}
+@media print{.view-nav{display:none}}
+
+/* Cartões e controles */
+.panel,.card,.executive,.speed-table,.matrix{box-shadow:var(--av-shadow)}
+button{font-family:var(--av-font-action);font-weight:500}
+button:not(:disabled):hover{border-color:var(--av-red)}
+button:disabled{opacity:.55;cursor:not-allowed}
+.av-primary,button[type=submit]{background:var(--av-red)!important;border-color:var(--av-red)!important;color:var(--av-white)!important;font-weight:600}
+.av-primary:hover,button[type=submit]:hover{background:var(--av-red-deep)!important;border-color:var(--av-red-deep)!important}
+select:hover,input:hover{border-color:var(--av-gray-light)}
+.chips button,.report-chips button{border-color:var(--av-red-line)!important;background:var(--av-red-soft)!important;color:var(--av-red-deep)!important}
+
+/* Rodapé de marca */
+.av-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--av-line);color:var(--av-gray);font:500 12px var(--av-font-action)}
+.av-footer strong{color:var(--av-graphite);font-weight:600}.av-footer strong span{color:var(--av-red)}
+@media print{.av-footer{display:none}}
+.av-footer{flex:none}
+.view-nav .nav-sair{margin-left:auto;color:rgba(255,255,255,.6);font-weight:500}
+.view-nav .nav-sair::before{content:"";width:8px;height:8px;margin-right:8px;border-radius:50%;background:var(--av-gray)}
+.view-nav .nav-sair:hover::before{background:var(--av-red)}
