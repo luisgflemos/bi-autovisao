@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrar | BI de Vendas Auto Visão</title>
+<meta name="description" content="Painel comercial da Auto Visão Vistorias Automotivas: receita, metas, clientes e vistoriadores em um só lugar.">
+<meta name="theme-color" content="#1A1A1A">
+<meta name="robots" content="noindex">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Auto Visão · BI de Vendas">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:title" content="BI de Vendas | Auto Visão">
+<meta property="og:description" content="Painel comercial da Auto Visão Vistorias Automotivas: receita, metas, clientes e vistoriadores em um só lugar.">
+<meta property="og:url" content="https://bi.autovisao.com/">
+<meta property="og:image" content="https://bi.autovisao.com/og-banner.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Auto Visão · BI de Vendas">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://bi.autovisao.com/og-banner.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%231A1A1A%22/%3E%3Ccircle cx=%2228%22 cy=%2228%22 r=%2215%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%227%22/%3E%3Ccircle cx=%2228%22 cy=%2228%22 r=%226%22 fill=%22%23F20C1F%22/%3E%3Cpath d=%22M39 39l11 11%22 stroke=%22%23fff%22 stroke-width=%227%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/design-system.css">
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+.form-side{display:flex;flex-direction:column;justify-content:center;padding:48px clamp(24px,7vw,96px);background:var(--av-white);border-top:6px solid var(--av-red)}
+.form-side img{width:min(260px,70%);height:auto}
+.tag{margin:44px 0 0;font:600 13px var(--av-font-action);letter-spacing:.14em;text-transform:uppercase;color:var(--av-red)}
+h1{margin:8px 0 6px;font-size:clamp(32px,4vw,46px);line-height:1.05}
+.lead{margin:0 0 28px;color:var(--av-gray)}
+form{display:grid;gap:16px;max-width:380px}
+label{display:grid;gap:6px;font:600 13px var(--av-font-action);color:var(--av-graphite)}
+input{min-height:48px;padding:10px 14px;border:1px solid var(--av-line);border-radius:10px;font-size:16px;background:var(--av-white);color:var(--av-black)}
+input:focus{border-color:var(--av-red);outline:none;box-shadow:0 0 0 3px rgba(242,12,31,.15)}
+button{min-height:50px;margin-top:6px;border:0;border-radius:10px;font-size:16px;cursor:pointer}
+.erro{margin:0;padding:10px 12px;border:1px solid var(--av-red-line);border-radius:10px;background:var(--av-red-soft);color:var(--av-red-deep);font-size:14px}
+.erro:empty{display:none}
+.nota{margin-top:28px;font-size:13px;color:var(--av-gray)}
+.art-side{position:relative;overflow:hidden;background:var(--av-graphite)}
+.art-side::before{content:"";position:absolute;right:-160px;top:-160px;width:520px;height:520px;border-radius:50%;border:70px solid rgba(255,255,255,.05)}
+.art{position:absolute;left:12%;right:12%;top:50%;transform:translateY(-55%);padding:30px;border-radius:22px;background:#262626;border-top:6px solid var(--av-red)}
+.kp{display:flex;gap:14px}.kp i{flex:1;height:58px;border-radius:10px;background:#333}
+.bars{display:flex;align-items:flex-end;gap:12px;height:200px;margin-top:28px;border-bottom:2px solid #3a3a3a}
+.bars i{flex:1;border-radius:6px 6px 0 0;background:var(--av-red)}.bars i:nth-child(even){background:#6a6a6a}
+.lens{position:absolute;right:16%;bottom:14%;width:130px;height:130px;border-radius:50%;border:20px solid #fff;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+.lens::before{content:"";position:absolute;inset:24px;border-radius:50%;background:var(--av-red)}
+.lens::after{content:"";position:absolute;width:22px;height:66px;background:#fff;border-radius:11px;right:-44px;bottom:-60px;transform:rotate(-45deg)}
+@media(max-width:820px){body{grid-template-columns:1fr}.art-side{display:none}.form-side{min-height:100vh}}
+</style>
+<body>
+<main class="form-side">
+  <img src="/logo-auto-visao.png" alt="Auto Visão Vistorias Automotivas">
+  <p class="tag">Painel comercial</p>
+  <h1>BI de Vendas</h1>
+  <p class="lead">Entre com o seu usuário e senha para continuar.</p>
+  <form method="post" action="/login">
+    <p class="erro" role="alert">{{ERRO}}</p>
+    <input type="hidden" name="proximo" value="{{PROXIMO}}">
+    <label>Usuário<input name="usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus></label>
+    <label>Senha<input name="senha" type="password" autocomplete="current-password" required></label>
+    <button type="submit" class="av-primary">Entrar</button>
+  </form>
+  <p class="nota">Acesso restrito à equipe Auto Visão. Esqueceu a senha? Fale com o administrador do BI.</p>
+</main>
+<div class="art-side" aria-hidden="true">
+  <div class="art"><div class="kp"><i></i><i></i><i></i></div>
+    <div class="bars"><i style="height:52%"></i><i style="height:40%"></i><i style="height:68%"></i><i style="height:50%"></i><i style="height:61%"></i><i style="height:47%"></i><i style="height:80%"></i><i style="height:58%"></i><i style="height:92%"></i><i style="height:66%"></i></div>
+  </div>
+  <div class="lens"></div>
+</div>
+</body>
+</html>

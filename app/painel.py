@@ -6,12 +6,25 @@ from contextlib import closing
 from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit
+import html
+import secrets
+import sys
+import tempfile
+from urllib.parse import parse_qs, quote, urlsplit
+
+import acesso
 
 ROOT = Path(__file__).resolve().parent
-PORT = int(os.environ.get("BI_PORT", "8765"))
+PORT = int(os.environ.get("BI_PORT") or os.environ.get("PORT") or "8765")
 HOST = os.environ.get("BI_HOST", "127.0.0.1")
 DATABASE = Path(os.environ.get("BI_DATABASE", ROOT / "vendas.sqlite3")).resolve()
+ACESSO = acesso.Acesso()
+TOKEN_IMPORTACAO = os.environ.get("BI_TOKEN_IMPORTACAO", "")
+LIMITE_BASE = 2 * 1024 ** 3
+# Rotas liberadas sem login: página de entrada, banner de prévia de link e recursos visuais.
+PUBLICAS = {"/login", "/logout", "/saude", "/og-banner.png", "/logo-auto-visao.png",
+            "/design-system.css", "/assets/fonts/fonts.css",
+            *(f"/assets/fonts/auto-visao-font-{i}.ttf" for i in range(1, 7))}
 JOINS = """
 FROM fato_item_orcamento f
 JOIN dim_unidade u ON u.id_erp=f.id_unidade
@@ -423,8 +436,119 @@ def speed_report(db, query):
 
 
 class Handler(BaseHTTPRequestHandler):
+    server_version = "BI-AutoVisao"
+    sys_version = ""
+
+    def client_ip(self):
+        encaminhado = self.headers.get("X-Forwarded-For", "")
+        return encaminhado.split(",")[0].strip() or self.client_address[0]
+
+    def security_headers(self):
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "same-origin")
+        if ACESSO.cookie_seguro:
+            self.send_header("Strict-Transport-Security", "max-age=31536000")
+
+    def redirect(self, location, cookie=None):
+        self.send_response(303)
+        self.send_header("Location", location)
+        self.send_header("Content-Length", "0")
+        self.send_header("Cache-Control", "no-store")
+        if cookie:
+            self.send_header("Set-Cookie", cookie)
+        self.security_headers()
+        self.end_headers()
+
+    def login_page(self, proximo="/", erro="", status=200):
+        page = (ROOT / "login.html").read_text(encoding="utf-8")
+        page = page.replace("{{ERRO}}", html.escape(erro)).replace("{{PROXIMO}}", html.escape(proximo))
+        self.reply(page.encode(), "text/html; charset=utf-8", status)
+
+    def do_HEAD(self):
+        self.do_GET()
+
     def do_GET(self):
         url = urlsplit(self.path)
+        if url.path == "/saude":
+            self.reply(b"ok", "text/plain; charset=utf-8")
+            return
+        if url.path == "/logout":
+            self.redirect("/login", ACESSO.cabecalho_cookie("", 0))
+            return
+        logado = not ACESSO.ativo or ACESSO.usuario_da_sessao(self.headers.get("Cookie"))
+        if url.path == "/login":
+            if logado and ACESSO.ativo:
+                self.redirect("/")
+            else:
+                self.login_page(safe_next(parse_qs(url.query).get("proximo", ["/"])[0]))
+            return
+        if not logado and url.path not in PUBLICAS:
+            if url.path.startswith("/api/"):
+                self.reply(b'{"erro":"login necessario"}', "application/json; charset=utf-8", 401)
+            else:
+                self.redirect("/login?proximo=" + quote(self.path, safe=""))
+            return
+        if url.path.startswith("/api/") and not DATABASE.is_file():
+            self.reply(b'{"erro":"base ainda nao carregada"}', "application/json; charset=utf-8", 503)
+            return
+        self.serve_get(url)
+
+    def do_POST(self):
+        url = urlsplit(self.path)
+        if url.path != "/login" or not ACESSO.ativo:
+            self.send_error(404)
+            return
+        size = int(self.headers.get("Content-Length") or 0)
+        if size > 4096:
+            self.send_error(413)
+            return
+        form = parse_qs(self.rfile.read(size).decode("utf-8", "replace"))
+        proximo = safe_next(form.get("proximo", ["/"])[0])
+        usuario, erro = ACESSO.autenticar(form.get("usuario", [""])[0], form.get("senha", [""])[0], self.client_ip())
+        if not usuario:
+            print(f"Login recusado para {form.get('usuario', [''])[0][:40]!r} de {self.client_ip()}", flush=True)
+            self.login_page(proximo, erro, 401)
+            return
+        print(f"Login de {usuario} de {self.client_ip()}", flush=True)
+        self.redirect(proximo, ACESSO.cabecalho_cookie(ACESSO.criar_sessao(usuario)))
+
+    def do_PUT(self):
+        """Importação única da base: PUT /admin/base com Authorization: Bearer BI_TOKEN_IMPORTACAO."""
+        if urlsplit(self.path).path != "/admin/base" or not TOKEN_IMPORTACAO:
+            self.send_error(404)
+            return
+        if not secrets.compare_digest(self.headers.get("Authorization", ""), f"Bearer {TOKEN_IMPORTACAO}"):
+            self.send_error(403)
+            return
+        size = int(self.headers.get("Content-Length") or 0)
+        if not 0 < size <= LIMITE_BASE:
+            self.send_error(411 if not size else 413)
+            return
+        DATABASE.parent.mkdir(parents=True, exist_ok=True)
+        fd, temp = tempfile.mkstemp(dir=DATABASE.parent, suffix=".import")
+        try:
+            with os.fdopen(fd, "wb") as out:
+                remaining = size
+                while remaining:
+                    chunk = self.rfile.read(min(remaining, 1 << 20))
+                    if not chunk:
+                        raise ValueError("upload interrompido")
+                    out.write(chunk)
+                    remaining -= len(chunk)
+            with closing(sqlite3.connect(Path(temp).as_uri() + "?mode=ro", uri=True)) as db:
+                if db.execute("PRAGMA quick_check").fetchone()[0] != "ok":
+                    raise ValueError("base corrompida")
+                db.execute("SELECT COUNT(*) FROM fato_item_orcamento").fetchone()
+            os.replace(temp, DATABASE)
+        except (ValueError, sqlite3.DatabaseError) as error:
+            Path(temp).unlink(missing_ok=True)
+            self.reply(f"falha: {error}".encode(), "text/plain; charset=utf-8", 400)
+            return
+        print(f"Base importada ({size} bytes)", flush=True)
+        self.reply(b"base importada", "text/plain; charset=utf-8")
+
+    def serve_get(self, url):
         database = DATABASE
         if url.path in ("/api/visao", "/api/relatorio-cliente", "/api/gerencial", "/api/vistoriadores", "/api/speed"):
             maintain_calendar(database)
@@ -474,18 +598,32 @@ class Handler(BaseHTTPRequestHandler):
         filename, mime = files[url.path]
         self.reply((ROOT / filename).read_bytes(), mime)
 
-    def reply(self, body, mime):
-        self.send_response(200)
+    def reply(self, body, mime, status=200):
+        self.send_response(status)
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.security_headers()
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+
+def safe_next(value):
+    """Aceita só caminhos internos para evitar redirecionamento aberto."""
+    return value if value.startswith("/") and not value.startswith("//") and "\\" not in value else "/"
 
 
 if __name__ == "__main__":
-    if not DATABASE.is_file():
+    if len(sys.argv) == 3 and sys.argv[1] == "--gerar-usuario":
+        acesso.gerar_usuario_cli(sys.argv[2])
+        raise SystemExit(0)
+    if not DATABASE.is_file() and not TOKEN_IMPORTACAO:
         raise SystemExit("Base SQLite ausente. Confira BI_DATABASE.")
+    if not ACESSO.ativo and HOST not in ("127.0.0.1", "localhost", "::1"):
+        raise SystemExit("Defina BI_USUARIOS antes de expor o BI fora do localhost.")
+    if not DATABASE.is_file():
+        print("Base ainda não carregada: aguardando importação em PUT /admin/base.", flush=True)
     print(f"BI de Vendas em http://{HOST}:{PORT}/", flush=True)
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
 

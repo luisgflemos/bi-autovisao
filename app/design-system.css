@@ -41,3 +41,6 @@ select:hover,input:hover{border-color:var(--av-gray-light)}
 .av-footer strong{color:var(--av-graphite);font-weight:600}.av-footer strong span{color:var(--av-red)}
 @media print{.av-footer{display:none}}
 .av-footer{flex:none}
+.view-nav .nav-sair{margin-left:auto;color:rgba(255,255,255,.6);font-weight:500}
+.view-nav .nav-sair::before{content:"";width:8px;height:8px;margin-right:8px;border-radius:50%;background:var(--av-gray)}
+.view-nav .nav-sair:hover::before{background:var(--av-red)}

@@ -11,3 +11,23 @@ O pacote contém a aplicação e os recursos visuais. A base SQLite é entregue 
 Para rodar sem Docker, defina `BI_DATABASE` com o caminho absoluto do SQLite e execute `python app/painel.py`. O padrão é escutar somente em `127.0.0.1:8765`. Use `BI_PORT` se precisar de outra porta.
 
 O ZIP privado contém dados comerciais. Transfira-o pelo canal corporativo autorizado e mantenha-o fora do Git e da pasta pública do proxy.
+
+## Login (usuário e senha por pessoa)
+
+O BI exige login sempre que escuta fora do `localhost`. Configure no servidor:
+
+- `BI_USUARIOS`: uma entrada por pessoa, separadas por vírgula, no formato `usuario:hash`. Gere cada entrada com `python app/painel.py --gerar-usuario NOME` (a senha é pedida sem aparecer na tela e precisa ter pelo menos 10 caracteres). Para remover alguém, apague a entrada e reinicie.
+- `BI_SESSAO_SEGREDO`: texto aleatório longo que assina os cookies de sessão. Trocar o valor desconecta todo mundo.
+- `BI_SESSAO_HORAS` (opcional, padrão 12): duração da sessão.
+
+Após 5 senhas erradas em 15 minutos, o usuário e o IP ficam bloqueados por 15 minutos. A página de login, o banner `/og-banner.png`, a logo, as fontes e `/saude` ficam públicos para o link preview funcionar. Os dados e a `/api/` exigem login.
+
+## Carga da base em servidor sem acesso a arquivos
+
+Com `BI_TOKEN_IMPORTACAO` definido, o BI inicia mesmo sem a base e aceita uma carga única:
+
+```
+curl -X PUT -H "Authorization: Bearer $BI_TOKEN_IMPORTACAO" --data-binary @dados/vendas.sqlite3 https://bi.autovisao.com/admin/base
+```
+
+A base é validada antes de substituir a atual. Remova `BI_TOKEN_IMPORTACAO` depois da carga para desligar a rota.
