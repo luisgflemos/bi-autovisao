@@ -461,6 +461,7 @@ class Handler(BaseHTTPRequestHandler):
             "/gerencial": ("gerencial.html", "text/html; charset=utf-8"),
             "/vistoriadores": ("gerencial.html", "text/html; charset=utf-8"),
             "/logo-auto-visao.png": ("Logo_AutoVisao_PNG.png", "image/png"),
+            "/og-banner.png": ("og-banner.png", "image/png"),
             "/filtros.js": ("filtros.js", "text/javascript; charset=utf-8"),
             "/design-system.css": ("design-system.css", "text/css; charset=utf-8"),
             "/assets/fonts/fonts.css": ("assets/fonts/fonts.css", "text/css; charset=utf-8"),

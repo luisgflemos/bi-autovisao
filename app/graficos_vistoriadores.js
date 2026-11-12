@@ -53,9 +53,9 @@ function inspectorChart(title, rows, series, valueOf, format) {
 function inspectorCharts(rows) {
   const money=cents=>currency.format(cents/100);
   return [
-    inspectorChart('Serviços por vistoriador · grupo',rows,[['Transferência','#1749a3'],['Cautelar','#ed9b16'],['Outros','#40444b']],r=>r.slice(1,4),v=>countFormat.format(v)),
-    inspectorChart('Serviços por vistoriador · base e móvel',rows,[['Base','#6829a6'],['Móvel','#18b899'],['Sem informação','repeating-linear-gradient(135deg,#b6bbc1 0 3px,#676e77 3px 5px)']],r=>r.slice(4,7),v=>countFormat.format(v)),
-    inspectorChart('Preço Médio por vistoriador',rows,[['','#397400']],r=>[r[8]/r[7]],money),
+    inspectorChart('Serviços por vistoriador · grupo',rows,[['Transferência','#373435'],['Cautelar','#BF1515'],['Outros','#C9C9C9']],r=>r.slice(1,4),v=>countFormat.format(v)),
+    inspectorChart('Serviços por vistoriador · base e móvel',rows,[['Base','#373435'],['Móvel','#F20C1F'],['Sem informação','repeating-linear-gradient(135deg,#b6bbc1 0 3px,#676e77 3px 5px)']],r=>r.slice(4,7),v=>countFormat.format(v)),
+    inspectorChart('Preço Médio por vistoriador',rows,[['','#656565']],r=>[r[8]/r[7]],money),
     inspectorChart('Faturamento por vistoriador',rows,[['','#bf1515']],r=>[r[8]],money),
   ];
 }
