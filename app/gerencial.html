@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Visão Gerencial | Auto Visão</title>
+<link rel="stylesheet" href="/design-system.css">
+<style>
+*{box-sizing:border-box}body{margin:0}main{padding:24px}.view-nav{display:flex;flex-wrap:wrap;align-items:flex-end;gap:3px;padding:5px 7px 0;background:#e6e6e6;border-radius:11px 11px 0 0;border-bottom:1px solid #cecece}.view-nav a{position:relative;display:inline-flex;align-items:center;min-height:41px;margin-bottom:-1px;padding:7px 15px;border:1px solid transparent;border-radius:10px 10px 0 0;color:var(--av-gray);font:800 clamp(15px,2vw,19px) var(--av-font-title);text-decoration:none}.view-nav a:hover{background:#f0f0f0;color:var(--av-black)}.view-nav a[aria-current=page]{background:white;color:var(--av-black);border-color:#cecece;border-bottom-color:white;box-shadow:inset 0 2px var(--av-red-deep)}@media print{.view-nav{display:none}}.heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}.heading img{width:clamp(90px,15vw,170px);height:auto}h1{margin:0;font-size:clamp(24px,3vw,36px)}h2{margin:0;font-size:17px}.filters,.stats{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.filters label{display:grid;gap:4px;font-weight:800;font-size:13px}.filters select,.filters input,.filters button{min-height:40px;border:1px solid var(--av-line);border-radius:8px;background:#fff;padding:6px 9px;max-width:min(390px,85vw)}.filters button{align-self:end;cursor:pointer}.stats span{background:white;border:1px solid var(--av-line);border-radius:7px;padding:6px 9px;font-size:13px}.charts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{background:white;border:1px solid var(--av-line);border-radius:12px;padding:12px;min-width:0}.card svg{display:block;width:100%;height:auto}.card svg text{fill:#444;font:11px var(--av-font-body)}.card svg .value{font-weight:800;fill:#101010}@media(max-width:1100px){.charts{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){main{padding:12px}.charts{grid-template-columns:1fr}.view-nav a{padding-inline:6px;font-size:13px}}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}main{padding:0}.view-nav,.filters,#status{display:none}.charts{grid-template-columns:repeat(4,minmax(0,1fr))}.card{break-inside:avoid}}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}.chips:empty,#status:empty{display:none}.chips button{min-height:32px;border:1px solid #e7bcbc;border-radius:8px;background:#fff3f3;color:#871414;font-weight:800;padding:4px 9px;cursor:pointer}.context{color:var(--av-gray);font-size:13px;margin:8px 0 14px}.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}.chart-group{min-width:0}.chart-group:first-child{grid-column:1/-1}.chart-group>h2{font-size:19px;margin:0 0 7px}.group-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chart-group:first-child .group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.card{padding:14px}.card h3{margin:0;font-size:16px}.card svg{max-height:220px}.card svg text{font-size:12px}
+@media(max-width:1000px){.charts{grid-template-columns:1fr}}
+@media(max-width:560px){.group-grid,.chart-group:first-child .group-grid{grid-template-columns:1fr}}
+@media print{.chips button{min-height:0;background:white;color:#101010;border-color:#ddd;cursor:default}.chips .remove-mark{display:none}.charts{grid-template-columns:1fr 1fr}.group-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-group:first-child .group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.card svg{max-height:120px}}
+.charts{grid-template-columns:minmax(0,1fr)}.chart-group:first-child{grid-column:auto}.group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.chart-group{--group-color:#bf1515}.chart-group.transferencia{--group-color:#1749a3}.chart-group.cautelar{--group-color:#007455}
+.chart-group>h2{border-left:4px solid var(--group-color);padding-left:8px}.chart-group .card{border-top:3px solid var(--group-color)}
+@media screen and (max-width:560px){.chart-group .group-grid{grid-template-columns:1fr}}
+@media print{.charts{grid-template-columns:1fr}.group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.card{print-color-adjust:exact}.card svg{max-height:105px}}
+.time-filters{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0}.time-filters fieldset{margin:0;padding:0;border:0;min-width:0}.time-filters legend{font-weight:800;font-size:13px;margin-bottom:5px}.time-options{display:flex;flex-wrap:wrap;gap:4px}.time-option{position:relative}.time-option input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}.time-option span{display:grid;place-items:center;min-width:40px;min-height:40px;padding:4px;border:1px solid var(--av-line);border-radius:7px;background:white;font-size:13px}.time-option input:checked+span{background:var(--av-red-deep);border-color:var(--av-red-deep);color:white;font-weight:800}.time-option input:focus-visible+span{outline:3px solid var(--av-black);outline-offset:1px}.chart-scroll{overflow-x:auto}
+@media print{.chart-scroll{overflow:visible}.chart-scroll svg{min-width:0!important}}
+.searchable-filter{min-width:0;max-width:100%;width:100%;min-height:40px;padding:6px 9px;border:1px solid var(--av-line);border-radius:8px;background:white;color:var(--av-black)}
+.gerencial-header{position:sticky;top:0;z-index:2;background:var(--av-offwhite);border-bottom:3px solid var(--av-red);margin-top:-24px;padding-top:24px}
+.gerencial-header .context{margin-bottom:10px}
+@media(max-width:560px){.gerencial-header{margin-top:-12px;padding-top:12px}}
+@media print{.gerencial-header{position:static;margin-top:0;padding-top:0;background:white}}
+.filter-fields{display:grid;width:100%;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end}
+.filter-fields label{min-width:0}.filter-fields .searchable-filter,.filter-fields #print{width:100%;height:40px;max-width:none}
+@media(max-width:1050px){.filter-fields{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.filter-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.filter-fields #print{height:auto}}
+.time-option{user-select:none;touch-action:pan-y}.time-filters{column-gap:28px}
+.inspector-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.inspector-grid .card{border-top:3px solid var(--av-red-deep)}.inspector-list{max-height:350px;overflow:auto}.inspector-row{padding:6px 2px;border-bottom:1px solid #eee;font-size:13px}.inspector-label{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px}.inspector-track{display:flex;height:9px;border-radius:8px;overflow:hidden;background:#eee}.inspector-legend{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0;font-size:12px}.inspector-legend span{display:inline-flex;align-items:center;gap:4px}.inspector-legend i{width:9px;height:9px;border-radius:2px}
+@media screen and (max-width:700px){.inspector-grid{grid-template-columns:1fr}}
+@media print{.inspector-list{max-height:none;overflow:visible}.inspector-row{break-inside:avoid}.inspector-track{print-color-adjust:exact}}
+</style>
+<main>
+<header class="gerencial-header">
+<nav class="view-nav" aria-label="Visões do BI">
+<a href="/">Visão Geral</a><a href="/relatorio-cliente">Visão por Cliente</a><a href="/gerencial" aria-current="page">Visão Gerencial</a><a href="/vistoriadores">Visão por Vistoriadores</a><a href="/speed">Speed Diário</a>
+</nav>
+<div class="heading"><h1>Visão Gerencial</h1><img src="/logo-auto-visao.png" alt="Auto Visão Vistorias Automotivas"></div>
+<div id="filtros-ativos" class="chips" aria-label="Filtros ativos"></div>
+<p id="stats" class="context"></p>
+</header>
+<form class="filters">
+<div class="filter-fields">
+<label>Unidade<select name="unidade"><option value="">Todas</option></select></label>
+<label>Vendedor<select name="vendedor"><option value="">Todos</option></select></label>
+<label>Grupo de produto<select name="grupo"><option value="">Todos</option></select></label>
+<label>Segmento<select name="segmento"><option value="">Todos</option></select></label>
+<label>Cliente<select name="cliente"><option value="">Todos</option></select></label>
+<button type="button" id="print" disabled>Imprimir / salvar em PDF</button>
+</div>
+<div class="time-filters">
+  <fieldset><legend>Ano</legend><div id="anos" class="time-options"></div></fieldset>
+  <fieldset><legend>Mês</legend><div id="meses" class="time-options"></div></fieldset>
+</div>
+</form>
+<p id="status" role="status"></p>
+<section class="charts" id="charts" aria-label="Indicadores gerenciais"></section>
+</main>
+<script src="/filtros.js"></script>
+<script src="/graficos_vistoriadores.js"></script>
+<script>
+const form=document.querySelector('form'),statusLine=document.querySelector('#status'),printButton=document.querySelector('#print');
+const inspectors=location.pathname==='/vistoriadores';
+if(inspectors) {
+  document.title='Visão por Vistoriadores | Auto Visão';
+  document.querySelector('h1').textContent='Visão por Vistoriadores';
+  document.querySelector('[aria-current=page]').removeAttribute('aria-current');
+  document.querySelector('a[href="/vistoriadores"]').setAttribute('aria-current','page');
+  document.querySelector('#charts').className='inspector-grid';
+}
+const currency=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+
+const compact=new Intl.NumberFormat('pt-BR',{notation:'compact',maximumFractionDigits:1});
+const titles=['Faturamento','Preço Médio','Venda Média Dia','Receita','Preço Médio','Receita','Preço Médio','Venda Média Dia','Venda Média Dia'];
+const lineCharts=new Set([1,4,6]);
+const monthNames=new Intl.DateTimeFormat('pt-BR',{month:'short',timeZone:'UTC'});
+function timeOptions(container,key,values,defaultValue) {
+  for(const [value,label] of values) {
+    const wrapper=node('label',undefined,'time-option');
+    const input=node('input');
+    input.type='checkbox';
+    input.name=key;
+    input.value=value;
+    input.checked=value===defaultValue;
+    wrapper.append(input,node('span',label));
+    document.querySelector(container).append(wrapper);
+  }
+}
+timeOptions('#meses','mes',Array.from({length:12},(_,i)=>[i+1,monthNames.format(new Date(Date.UTC(2026,i,1))).replace('.','')]));
+function node(tag,text,cls) {
+  const item=document.createElement(tag);
+  if(text!==undefined) item.textContent=text;
+  if(cls) item.className=cls;
+  return item;
+}
+function svg(tag,attrs,text) {
+  const item=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const [key,value] of Object.entries(attrs)) item.setAttribute(key,value);
+  if(text!==undefined)item.textContent=text;
+  return item;
+}
+function chart(title,periods,cents,line) {
+  const card=node('article',undefined,'card');
+  card.append(node('h3',title));
+  const labels=periods.map(period=>period.slice(5)+'/'+period.slice(2,4));
+  const values=cents.map(value=>value===null?null:value/100);
+  const points=values.filter(value=>value!==null);
+  if(!points.length){card.append(node('p','Sem dados no período.'));return card;}
+  const width=Math.max(320,periods.length*72+20);
+  const svgChart=svg('svg',{viewBox:'0 0 '+width+' 165',role:'img','aria-label':title+' · '+labels.map((label,i)=>label+' '+(values[i]===null?'sem dados':currency.format(values[i]))).join(' · ')});
+  if(periods.length>4)svgChart.style.minWidth=width+'px';
+  const min=Math.min(...points),max=Math.max(...points);
+  const gap=Math.max((max-min)*.15,Math.abs(max)*.05,1);
+  const low=line?min-gap:Math.min(0,min-gap);
+  const high=line?max+gap:Math.max(0,max+gap);
+  const y=value=>128-(value-low)/(high-low)*94;
+  for(const fraction of [0,.25,.5,.75,1]) {
+    const py=128-fraction*94;
+    svgChart.append(svg('line',{x1:12,x2:width-12,y1:py,y2:py,stroke:'#ddd','stroke-dasharray':'3 4'}));
+  }
+  let prior=null;
+  const marks=[];
+  values.forEach((value,i)=>{
+    const x=12+(width-24)*(i+.5)/periods.length;
+    svgChart.append(svg('text',{x,y:151,'text-anchor':'middle'},labels[i]));
+    if(value===null){prior=null;return;}
+    const py=y(value);
+    if(line) {
+      if(prior) svgChart.append(svg('line',{x1:prior[0],y1:prior[1],x2:x,y2:py,stroke:'var(--group-color)','stroke-width':2.5}));
+      prior=[x,py];
+    }
+    const mark=line?svg('circle',{cx:x,cy:py,r:4,fill:'var(--group-color)'}):svg('rect',{x:x-17,y:Math.min(py,y(0)),width:34,height:Math.max(1,Math.abs(y(0)-py)),rx:3,fill:'var(--group-color)'});
+    mark.append(svg('title',{},labels[i]+' · '+currency.format(value)));
+    marks.push(mark,svg('text',{x,y:Math.min(py,line?py:y(0))-7,'text-anchor':'middle',class:'value'},line?currency.format(value):'R$ '+compact.format(value)));
+  });
+  svgChart.append(...marks);
+  const scroll=node('div',undefined,'chart-scroll');
+  scroll.append(svgChart);
+  card.append(scroll);
+  return card;
+}
+let revision=0, initialized=false;
+function activeFilters() {
+  const chips=document.querySelector('#filtros-ativos');
+  chips.replaceChildren();
+  const dimensions={unidade:'Unidade',vendedor:'Vendedor',grupo:'Grupo de produto',segmento:'Segmento',cliente:'Cliente'};
+  for(const [text,control,reset] of [
+    ...Object.entries(dimensions).map(([key,label])=>{
+      const select=form.elements[key];
+      return [select.value?label+' · '+select.value:'',select,()=>{select.value='';}];
+    }),
+    ...[...form.querySelectorAll('.time-option input:checked')].map(input=>[
+      (input.name==='ano'?'Ano':'Mês')+' · '+input.nextElementSibling.textContent,input,()=>{input.checked=false;},
+    ]),
+  ]) {
+    if(!text)continue;
+    const button=node('button',text);
+    const removeMark=node('span',' ×','remove-mark');
+    removeMark.setAttribute('aria-hidden','true');
+    button.append(removeMark);
+    button.type='button';
+    button.setAttribute('aria-label','Remover filtro '+text);
+    button.addEventListener('click',()=>{reset();refresh();control.focus();});
+    chips.append(button);
+  }
+}
+async function refresh() {
+  syncSearchFilters(form);
+  const current=++revision;
+  const params=new URLSearchParams(new FormData(form));
+  if(initialized && !params.has('ano'))params.set('ano','todos');
+  statusLine.textContent='Carregando…';
+  printButton.disabled=true;
+  try {
+    const response=await fetch((inspectors?'/api/vistoriadores?':'/api/gerencial?')+params);
+    if(!response.ok) throw Error('Confira a seleção e a data de corte.');
+    const data=await response.json();
+    if(current!==revision)return;
+    if(!initialized) {
+      for(const [key,values] of Object.entries(data.opcoes)) {
+        for(const value of values) form.elements[key].add(new Option(value,value));
+      }
+      timeOptions('#anos','ano',data.anos.map(year=>[year,year]),data.anos.at(-1));
+      initialized=true;
+    }
+    activeFilters();
+    document.querySelector('#stats').textContent=data.periodos.length?data.periodos.length+' meses exibidos':'Sem meses disponíveis para a seleção.';
+    const groups=[['Desempenho geral','geral',[0,1,2]],['Transferência','transferencia',[3,4,7]],['Cautelar','cautelar',[5,6,8]]];
+    document.querySelector('#charts').replaceChildren(...(inspectors?inspectorCharts(data.vistoriadores):groups.map(([title,key,indices])=>{
+      const group=node('section',undefined,'chart-group '+key);
+      const grid=node('div',undefined,'group-grid');
+      grid.append(...indices.map(i=>chart(titles[i],data.periodos,data.graficos[i],lineCharts.has(i))));
+      group.append(node('h2',title),grid);
+      return group;
+    })));
+    statusLine.textContent='';
+    printButton.disabled=!data.periodos.length;
+  } catch(error) {if(current===revision)statusLine.textContent=error.message;}
+}
+form.addEventListener('submit',event=>event.preventDefault());
+form.addEventListener('change',refresh);
+printButton.addEventListener('click',()=>print());
+enableTimeRangeDrag(form);
+makeSearchableFilters(form,['unidade','vendedor','grupo','segmento','cliente']);
+refresh();
+</script>
+</html>

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Visão Geral de Vendas | Auto Visão</title>
+<link rel="stylesheet" href="/design-system.css">
+<style>
+*{box-sizing:border-box}body{margin:0}.layout{display:grid;grid-template-columns:244px minmax(0,1fr);min-height:100vh}
+aside{background:white;border-right:1px solid var(--av-line);padding:24px 18px}main{padding:24px;min-width:0}
+.brand{font:900 24px var(--av-font-title);border-left:4px solid var(--av-red);padding-left:12px;margin-bottom:24px}
+.brand img{display:block;width:100%;max-width:190px;height:auto;margin-bottom:12px}
+h1{margin:0;font-size:clamp(26px,4vw,38px)}h2{margin:0;font-size:19px}p{margin:6px 0;color:var(--av-gray)}
+.dashboard-header{position:sticky;top:0;z-index:2;background:var(--av-offwhite);margin-top:-24px;padding:24px 0 8px}
+@media(max-width:820px){.dashboard-header{margin-top:-16px;padding-top:16px}}
+label{display:grid;gap:4px;margin:10px 0;font:500 12px var(--av-font-action)}select,button{width:100%;min-height:40px;padding:6px 9px;border:1px solid var(--av-line);border-radius:8px;background:white;color:var(--av-black)}
+button{cursor:pointer}button:hover{border-color:var(--av-red-deep)}
+.cards,.charts{display:grid;gap:14px;margin-top:16px}.cards{grid-template-columns:repeat(3,minmax(0,1fr))}.charts{grid-template-columns:repeat(2,minmax(0,1fr))}
+.panel{background:white;border:1px solid var(--av-line);border-radius:var(--av-radius);padding:16px;min-width:0}
+.metric{border-top:3px solid var(--av-red)}.metric strong{display:block;font:900 clamp(22px,3vw,32px) var(--av-font-title);margin:4px 0}
+.metric small{display:block;color:var(--av-gray)}.comparison{margin-top:6px;font-size:13px}.change{font-weight:900}.positive{color:#137547}.negative{color:var(--av-red-deep)}
+.metric-footer{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:3px 10px}.nominal{margin-left:auto;font:900 18px var(--av-font-title);font-variant-numeric:tabular-nums;white-space:nowrap}
+.chart-header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.chart-header select{width:auto}
+.bars{max-height:325px;overflow:auto;margin-top:12px;padding:4px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 12px;align-items:center;min-height:54px;padding:9px 8px;text-align:left;border:0;border-bottom:1px solid #ededed;border-radius:6px;font-size:14px;line-height:1.3;color:var(--av-graphite)}
+button.bar:hover,button.bar[aria-pressed=true]{background:#fff3f3}.bar strong{font-variant-numeric:tabular-nums;white-space:nowrap}.track{grid-column:1/-1;background:#eee;height:7px;border-radius:8px;overflow:hidden}.fill{display:block;height:100%;border-radius:8px;background:var(--av-red-deep)}
+.charts article:first-child{grid-column:1/-1}.evolution{overflow-x:auto;margin-top:10px}.evolution svg{display:block;width:100%;min-width:490px;max-height:340px}.evolution svg text{fill:#555;font-size:12px;font-family:var(--av-font-body)}.legend{display:flex;gap:18px;margin:12px 0 0;font-size:13px}.legend span:first-child{color:var(--av-red-deep)}.legend span:last-child{color:#101010}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.chips:empty{display:none}.chips button{width:auto;min-height:32px;border-color:#e7bcbc;background:#fff3f3;color:#871414;font-weight:800}.chips button span{margin-left:5px}
+.time-filter{min-width:0;margin:10px 0;padding:0;border:0}.time-filter legend{font:500 12px var(--av-font-action);padding:0 0 5px}.time-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.time-option{position:relative;display:block;margin:0}.time-option input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}.time-option span{display:grid;place-items:center;min-height:40px;padding:2px;border:1px solid var(--av-line);border-radius:7px;font-size:11px}.time-option input:checked+span{background:var(--av-red-deep);border-color:var(--av-red-deep);color:white;font-weight:800}.time-option input:focus-visible+span{outline:3px solid var(--av-black);outline-offset:1px}
+@media(max-width:820px){.layout{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--av-line)}.filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}.brand{margin-bottom:10px}main{padding:16px}}
+@media(max-width:560px){.cards,.charts{grid-template-columns:1fr}.metric strong{font-size:27px}}
+.view-nav{display:flex;flex-wrap:wrap;align-items:flex-end;gap:3px;padding:5px 7px 0;background:#e6e6e6;border-radius:11px 11px 0 0;border-bottom:1px solid #cecece}.view-nav a{position:relative;display:inline-flex;align-items:center;min-height:41px;margin-bottom:-1px;padding:7px 15px;border:1px solid transparent;border-radius:10px 10px 0 0;color:var(--av-gray);font:800 clamp(15px,2vw,19px) var(--av-font-title);text-decoration:none}.view-nav a:hover{background:#f0f0f0;color:var(--av-black)}.view-nav a[aria-current=page]{background:white;color:var(--av-black);border-color:#cecece;border-bottom-color:white;box-shadow:inset 0 2px var(--av-red-deep)}@media print{.view-nav{display:none}}
+@media(max-width:560px){.view-nav a{padding-inline:6px;font-size:13px}}
+.searchable-filter{min-width:0;max-width:100%;width:100%;min-height:40px;padding:6px 9px;border:1px solid var(--av-line);border-radius:8px;background:white;color:var(--av-black)}
+.time-option{user-select:none;touch-action:pan-y}
+.bars[data-metric=receita]{--bar-color:#bf1515;--bar-highlight:#fff3f3}
+.bars[data-metric=quantidade]{--bar-color:#1749a3;--bar-highlight:#edf3ff}
+.bars[data-metric=preco]{--bar-color:#397400;--bar-highlight:#eef6e8}
+.bars[data-metric] .fill{background:var(--bar-color)}
+.bars[data-metric] button.bar:hover,.bars[data-metric] button.bar[aria-pressed=true]{background:var(--bar-highlight);border-bottom-color:var(--bar-color)}
+.cards:has(.target-card){grid-template-columns:repeat(4,minmax(0,1fr))}.target-card .target-value{font-size:14px;font-weight:800;margin:4px 0}.target-card .target-period{font-size:12px;color:var(--av-gray)}
+@media(max-width:1100px){.cards:has(.target-card){grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.cards:has(.target-card){grid-template-columns:1fr}}
+</style>
+<div class="layout">
+<aside>
+  <div class="brand"><img src="/logo-auto-visao.png" alt="Auto Visão Vistorias Automotivas">BI de Vendas</div>
+  <h2>Filtros</h2>
+  <form id="filtros" class="filters">
+    <fieldset class="time-filter"><legend>Ano</legend><div id="tempo-ano" class="time-options"></div></fieldset>
+    <fieldset class="time-filter"><legend>Semestre</legend><div id="tempo-semestre" class="time-options"></div></fieldset>
+    <fieldset class="time-filter"><legend>Trimestre</legend><div id="tempo-trimestre" class="time-options"></div></fieldset>
+    <fieldset class="time-filter"><legend>Mês</legend><div id="tempo-mes" class="time-options"></div></fieldset>
+    <label>Unidade<select name="unidade"></select></label>
+    <label>Produto / Serviço<select name="servico"></select></label>
+    <label>Grupo de produto<select name="grupo"></select></label>
+    <label>Vendedor<select name="vendedor"></select></label>
+    <label>Segmento<select name="segmento"></select></label>
+    <label>Cliente<select name="cliente"></select></label>
+    <button type="reset">Limpar filtros</button>
+  </form>
+</aside>
+<main>
+  <header class="dashboard-header">
+  <nav class="view-nav" aria-label="Visões do BI">
+    <a href="/" aria-current="page">Visão Geral</a>
+    <a id="relatorio-cliente" href="/relatorio-cliente">Visão por Cliente</a>
+    <a href="/gerencial">Visão Gerencial</a>
+    <a href="/vistoriadores">Visão por Vistoriadores</a>
+    <a href="/speed">Speed Diário</a>
+  </nav>
+  <div id="ativos" class="chips" aria-label="Filtros ativos"></div>
+  <p id="status" role="status"></p>
+  </header>
+  <section class="cards" id="indicadores" aria-label="Indicadores acumulados no ano"></section>
+  <section class="charts">
+    <article class="panel"><div class="chart-header"><h2>Evolução de Vendas</h2><div class="chart-header"><select id="metrica-evolucao" aria-label="Indicador da evolução"><option value="receita">Receita</option><option value="quantidade">Quantidade</option></select><select form="filtros" name="evolucao" aria-label="Agrupar evolução"><option value="mes">Mês</option><option value="trimestre">Trimestre</option><option value="semestre">Semestre</option><option value="ano">Ano</option></select></div></div><div class="legend" id="legenda-evolucao"></div><div id="evolucao" class="evolution"></div></article>
+    <article class="panel"><div class="chart-header"><h2>Receita</h2><select form="filtros" name="receita" aria-label="Agrupar receita"></select></div><div id="receita" class="bars"></div></article>
+    <article class="panel"><div class="chart-header"><h2>Quantidade</h2><select form="filtros" name="quantidade" aria-label="Agrupar quantidade"></select></div><div id="quantidade" class="bars"></div></article>
+    <article class="panel"><div class="chart-header"><h2>Preço Médio</h2><select form="filtros" name="preco" aria-label="Agrupar preço médio"></select></div><div id="preco" class="bars"></div></article>
+    <article class="panel"><div class="chart-header"><h2>Clientes</h2><select id="metrica-clientes" aria-label="Indicador por cliente"><option value="receita">Receita</option><option value="quantidade">Quantidade</option><option value="preco">Preço Médio</option></select></div><div id="clientes" class="bars"></div></article>
+  </section>
+</main>
+</div>
+<script src="/filtros.js"></script>
+<script>
+const form = document.querySelector('#filtros');
+const statusLine = document.querySelector('#status');
+const money = new Intl.NumberFormat('pt-BR', {style:'currency',currency:'BRL'});
+const integer = new Intl.NumberFormat('pt-BR');
+const compact = new Intl.NumberFormat('pt-BR', {notation:'compact'});
+const date = value => value.split('-').reverse().join('/');
+const months = new Intl.DateTimeFormat('pt-BR',{month:'long',timeZone:'UTC'});
+const timeNames={ano:'Ano',semestre:'Semestre',trimestre:'Trimestre',mes:'Mês'};
+function timeOptions(key, labels, checked) {
+  const container=document.querySelector('#tempo-'+key);
+  for(const [value,title] of labels) {
+    const label=element('label',undefined,'time-option');
+    const input=element('input');
+    input.type='checkbox';
+    input.name=key;
+    input.value=value;
+    input.defaultChecked=value===checked;
+    label.append(input,element('span',title));
+    container.append(label);
+  }
+}
+timeOptions('semestre',[[1,'S1'],[2,'S2']]);
+timeOptions('trimestre',Array.from({length:4},(_,i)=>[i+1,'T'+(i+1)]));
+timeOptions('mes',Array.from({length:12},(_,i)=>[i+1,months.format(new Date(Date.UTC(2026,i,1))).slice(0,3)]));
+const dimensions={servico:'Produto / Serviço',grupo:'Grupo de produto',vendedor:'Vendedor',unidade:'Unidade',segmento:'Segmento'};
+const rankings={receita:'vendedor',quantidade:'unidade',preco:'servico'};
+for(const [metric,initial] of Object.entries(rankings)) {
+  for(const [key,label] of Object.entries(dimensions)) {
+    form.elements[metric].add(new Option(label,key,key===initial,key===initial));
+  }
+}
+function activeFilters() {
+  const reportFilters=new URLSearchParams();
+  const reportDimension=['vendedor','unidade'].find(name=>form.elements[name].value);
+  if(reportDimension) reportFilters.set(reportDimension,form.elements[reportDimension].value);
+  document.querySelector('#relatorio-cliente').href='/relatorio-cliente'+(reportFilters.size?'?'+reportFilters:'');
+  const chips=[];
+  function add(label, control, remove) {
+    const chip=element('button',label);
+    chip.type='button';
+    chip.setAttribute('aria-label','Remover filtro '+label);
+    chip.append(element('span','×'));
+    chip.addEventListener('click',()=>{
+      remove();
+      refresh();
+      control.focus();
+    });
+    chips.push(chip);
+  }
+  for(const input of form.querySelectorAll('.time-option input:checked')) {
+    add(timeNames[input.name]+' · '+input.nextElementSibling.textContent,input,()=>{input.checked=false;});
+  }
+  for(const [key,title] of Object.entries({...dimensions,segmento:'Segmento',cliente:'Cliente'})) {
+    const select=form.elements[key];
+    if(select.value) add(title+' · '+select.selectedOptions[0].text,select,()=>{select.value='';});
+  }
+  document.querySelector('#ativos').replaceChildren(...chips);
+}
+function element(tag, text, cls) {
+  const node = document.createElement(tag);
+  if(text !== undefined) node.textContent = text;
+  if(cls) node.className = cls;
+  return node;
+}
+function populate(select, options, all) {
+  const selected = select.value;
+  select.replaceChildren(...(all ? [new Option('Todos','')] : []), ...options.map(v=>new Option(v,v)));
+  if([...select.options].some(o=>o.value===selected)) select.value=selected;
+}
+function cards(data) {
+  const metrics = ([count,cents]) => [cents/100,count ? cents/100/count : null,count];
+  const actual=metrics(data.atual), prior=metrics(data.anterior);
+  const cards = ['Receita','Preço Médio','Quantidade'].map((name,i)=>{
+    const format=i===2 ? v=>integer.format(v) : v=>v===null?'—':money.format(v);
+    const delta=prior[i] && actual[i]!==null ? ((actual[i]/prior[i]-1)*100) : null;
+    const nominal=data.anterior[0] && actual[i]!==null ? actual[i]-prior[i] : null;
+    const panel=element('article',undefined,'panel metric');
+    const comparison=element('small',undefined,'comparison');
+    const change=delta===null?'—':new Intl.NumberFormat('pt-BR',{signDisplay:'exceptZero',maximumFractionDigits:1}).format(delta)+'%';
+    comparison.append(element('span',change,'change '+(delta>0?'positive':delta<0?'negative':'')));
+    comparison.append(data.recorte?' · Mesmo período do ano anterior':' · YTD vs. ano anterior');
+    const details=element('div');
+    details.append(comparison,element('small',(data.recorte?'Período anterior':data.cortes.length===1?'Até '+date(data.cortes[0][1]):'Acumulados anteriores')+' · '+(data.anterior[0]?format(prior[i]):'sem dados')));
+    const footer=element('div',undefined,'metric-footer');
+    footer.append(details);
+    if(nominal!==null) {
+      const sign=nominal>0?'+':nominal<0?'−':'';
+      footer.append(element('span','('+sign+format(Math.abs(nominal))+')',
+        'nominal '+(nominal>0?'positive':nominal<0?'negative':'')));
+    }
+    panel.append(element('h2',name),element('strong',format(actual[i])),footer);
+    return panel;
+  });
+  if(data.meta) {
+    const target=element('article',undefined,'panel metric target-card');
+    target.append(element('h2','Meta'));
+    if(data.meta.quantidade===null) {
+      target.append(element('p','Meta ainda não cadastrada para o recorte.'));
+    } else {
+      target.append(element('p','Receita · '+money.format(data.meta.receita/100),'target-value'),
+        element('p','Preço Médio · '+(data.meta.preco===null?'—':money.format(data.meta.preco/100)),'target-value'),
+        element('p','Quantidade · '+integer.format(data.meta.quantidade),'target-value'),
+        element('p','Meta integral dos meses selecionados','target-period'));
+    }
+    cards.push(target);
+  }
+  document.querySelector('#indicadores').replaceChildren(...cards);
+}
+function bars(id, rows, metric=id) {
+  const container=document.getElementById(id);
+  container.dataset.metric=metric;
+  const dimension=id==='clientes'?'cliente':form.elements[id]?.value;
+  const select=dimension ? form.elements[dimension] : null;
+  const values=rows.map(([label,count,cents])=>[label,metric==='quantidade'?count:cents/100/(metric==='preco'?count:1)]).sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(1,...values.map(([,v])=>Math.abs(v)));
+  const nodes=values.map(([name,value])=>{
+    const row=element(select?'button':'div',undefined,'bar');
+    if(select) {
+      row.type='button';
+      row.setAttribute('aria-label','Filtrar '+name);
+      row.setAttribute('aria-pressed',select.value===name);
+      row.addEventListener('click',()=>{
+        select.value=select.value===name?'':name;
+        refresh();
+      });
+    }
+    const track=element('span',undefined,'track');
+    const fill=element('span',undefined,'fill');
+    fill.style.width=(100*Math.abs(value)/max)+'%';
+    track.append(fill);
+    row.append(element('span',name),element('strong',(metric==='quantidade'?integer:money).format(value)),track);
+    return row;
+  });
+  container.replaceChildren(...(nodes.length?nodes:[element('p','Sem dados no período.')]));
+}
+let evolutionData;
+function evolution(data) {
+  evolutionData=data;
+  const container=document.querySelector('#evolucao');
+  const quantity=document.querySelector('#metrica-evolucao').value==='quantidade';
+  const current=new Map(),previous=new Map();
+  for(const [year,period,series,count,cents] of data.evolucao) {
+    (series?previous:current).set(year+'|'+period,quantity?count:cents/100);
+  }
+  const periods=[...new Set([...current.keys(),...previous.keys()])].sort();
+  const colors=['#BF1515','#888'];
+  const legends=data.cortes.length===1?data.cortes[0].map(d=>d.slice(0,4)):['Ano selecionado','Ano anterior'];
+  document.querySelector('#legenda-evolucao').replaceChildren(...legends.map((label,i)=>{
+    const item=element('span','■ '+label);
+    item.style.color=i===0?colors[0]:'#555';
+    return item;
+  }));
+  if(!periods.length){container.replaceChildren(element('p','Sem dados no período.'));return;}
+  function svgNode(tag,attrs,label) {
+    const node=document.createElementNS('http://www.w3.org/2000/svg',tag);
+    for(const [key,value] of Object.entries(attrs)) node.setAttribute(key,value);
+    if(label!==undefined) node.textContent=label;
+    return node;
+  }
+  const width=Math.max(900,periods.length*62+110);
+  const left=92,right=width-22,top=16,bottom=218;
+  const chart=svgNode('svg',{viewBox:'0 0 '+width+' 250',role:'img','aria-label':'Comparação por período entre os anos'});
+  if(periods.length>12) chart.style.minWidth=width+'px';
+  const values=[...current.values(),...previous.values()];
+  const min=Math.min(...values),max=Math.max(...values);
+  const gap=Math.max((max-min)*.18,Math.abs(max)*.02,1);
+  const low=min>0?Math.max(0,min-gap):Math.min(0,min-gap);
+  const high=Math.max(0,max+gap);
+  const format=quantity?integer:money;
+  const y=value=>bottom-(value-low)/(high-low)*(bottom-top);
+  for(let i=0;i<=4;i++){
+    const value=low+(high-low)*i/4, line=y(value);
+    chart.append(svgNode('line',{x1:left,x2:right,y1:line,y2:line,stroke:'#ddd','stroke-dasharray':'3 4'}),
+      svgNode('text',{x:left-9,y:line+4,'text-anchor':'end'},(quantity?'':'R$ ')+compact.format(value)));
+  }
+  const step=(right-left)/periods.length,barWidth=Math.min(42,step*.33);
+  periods.forEach((key,i)=>{
+    const x=left+step*(i+.5);
+    const [year,period]=key.split('|');
+    const name=/^\d{2}$/.test(period)?months.format(new Date(Date.UTC(2026,Number(period)-1,1))).slice(0,3):period;
+    const label=data.cortes.length>1?name+'/'+year.slice(2):name;
+    const baseline=y(Math.max(0,low));
+    [current,previous].forEach((series,j)=>{
+      if(!series.has(key)) return;
+      const value=series.get(key),height=y(value);
+      const bar=svgNode('rect',{x:x+(j===0?-barWidth-2:2),y:Math.min(height,baseline),width:barWidth,height:Math.max(1,Math.abs(height-baseline)),rx:3,fill:colors[j]});
+      bar.append(svgNode('title',{},name+' · '+(Number(year)-j)+' · '+format.format(value)));
+      chart.append(bar);
+    });
+    chart.append(svgNode('text',{x,y:bottom+21,'text-anchor':'middle'},label));
+  });
+  container.replaceChildren(chart);
+}
+document.querySelector('#metrica-evolucao').addEventListener('change',()=>{
+  if(evolutionData) evolution(evolutionData);
+});
+const clientMetric=document.querySelector('#metrica-clientes');
+let clients=[];
+clientMetric.addEventListener('change',()=>bars('clientes',clients,clientMetric.value));
+let revision=0, initialized=false;
+async function refresh() {
+  syncSearchFilters(form);
+  const current=++revision;
+  activeFilters();
+  statusLine.textContent='Consultando histórico…';
+  try {
+    const params=new URLSearchParams(new FormData(form));
+    if(initialized && !params.has('ano')) params.set('ano','todos');
+    const response=await fetch('/api/visao?'+params);
+    if(!response.ok) throw Error('Consulta indisponível');
+    const data=await response.json();
+    if(current!==revision) return;
+    if(!initialized) {
+      timeOptions('ano',data.anos.map(year=>[year,year]),data.anos.at(-1));
+      for(const [key,values] of Object.entries(data.opcoes)) populate(form.elements[key],values,true);
+      initialized=true;
+    }
+    activeFilters();
+    statusLine.textContent=data.cortes.length?(data.recorte?'Período selecionado · ':'YTD até ')+data.cortes.map(pair=>data.recorte?pair[0].slice(0,4):date(pair[0])).join(' · '):'Sem dados para a combinação de períodos.';
+    cards(data);
+    evolution(data);
+    for(const [key,rows] of Object.entries(data.rankings)) bars(key,rows);
+    clients=data.clientes;
+    bars('clientes',clients,clientMetric.value);
+  } catch {
+    if(current===revision) statusLine.textContent='Não foi possível carregar o painel.';
+  }
+}
+document.addEventListener('change',event=>{
+  if(event.target.form!==form) return;
+  refresh();
+});
+form.addEventListener('submit',event=>event.preventDefault());
+form.addEventListener('reset',()=>setTimeout(()=>refresh(),0));
+enableTimeRangeDrag(form);
+makeSearchableFilters(form,['unidade','servico','grupo','vendedor','segmento','cliente']);
+refresh();
+</script>
+</html>

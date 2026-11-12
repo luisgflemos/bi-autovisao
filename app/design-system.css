@@ -1,0 +1,6 @@
+@import url('./assets/fonts/fonts.css');
+:root{--av-red:#F20C1F;--av-black:#101010;--av-white:#FFFFFF;--av-graphite:#1A1A1A;--av-gray:#656565;--av-offwhite:#F4F4F4;--av-red-deep:#BF1515;--av-line:#ddd;--av-radius:14px;--av-font-title:'Nunito','Segoe UI',sans-serif;--av-font-action:'Poppins','Segoe UI',sans-serif;--av-font-body:'Mulish','Segoe UI',sans-serif}
+html{color-scheme:light}body{font-family:var(--av-font-body);font-weight:400;color:var(--av-graphite);background:var(--av-offwhite)}
+h1,h2,h3,h4{font-family:var(--av-font-title);font-weight:900;color:var(--av-graphite)}
+button,input,select,textarea{font-family:var(--av-font-body)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--av-black)!important;outline-offset:3px}

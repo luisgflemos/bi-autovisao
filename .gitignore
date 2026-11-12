@@ -1,0 +1,12 @@
+/dados/
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.xlsx
+*.zip
+.env
+.env.*
+__pycache__/
+*.pyc

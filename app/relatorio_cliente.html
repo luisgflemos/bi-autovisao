@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acompanhamento de vendas por cliente | Auto Visão</title>
+<link rel="stylesheet" href="/design-system.css">
+<style>
+*{box-sizing:border-box}body{margin:0}main{padding:24px}header{border-bottom:3px solid var(--av-red);padding-bottom:12px}header img{width:170px;height:auto;display:block;margin:12px 0}h1{margin:0}p{margin:8px 0}a{color:var(--av-red-deep)}form{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:16px 0}label{display:grid;gap:4px;font-weight:800}button,input,select{min-height:40px;border:1px solid var(--av-line);border-radius:8px;background:white;padding:6px 10px;max-width:100%}button{cursor:pointer;font-weight:800}.matrix{overflow:auto;max-height:70vh;border:1px solid var(--av-line);border-radius:10px;background:white}table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;font-variant-numeric:tabular-nums}th,td{padding:7px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid #ececec}thead{position:sticky;top:0;z-index:2}thead th{background:#262626;color:white}thead th[colspan]{text-align:center}.name{position:sticky;left:0;text-align:left;max-width:240px;white-space:normal;min-width:140px}tbody .name{background:white}tbody tr:nth-child(even) td,tbody tr:nth-child(even) th{background:#f7f7f7}.total th{background:#f9e7e8;color:#101010}.zero{color:#656565}.history,.subtotal{font-weight:800}.subtotal{border-left:1px solid #ddd}@media(max-width:620px){main{padding:12px}form label:first-child{width:100%}}@page{size:A4 landscape;margin:8mm}@media print{body{background:white}main{padding:0}form,.actions,#estado{display:none}.matrix{overflow:visible;max-height:none;border:0}table{font-size:7pt}th,td{padding:2px 3px;white-space:normal}thead,.name{position:static}.name{min-width:0}thead th,.total th{background:white;color:#101010}tr{break-inside:avoid}header img{width:110px}}
+.view-nav{display:flex;flex-wrap:wrap;align-items:flex-end;gap:3px;padding:5px 7px 0;background:#e6e6e6;border-radius:11px 11px 0 0;border-bottom:1px solid #cecece}.view-nav a{position:relative;display:inline-flex;align-items:center;min-height:41px;margin-bottom:-1px;padding:7px 15px;border:1px solid transparent;border-radius:10px 10px 0 0;color:var(--av-gray);font:800 clamp(15px,2vw,19px) var(--av-font-title);text-decoration:none}.view-nav a:hover{background:#f0f0f0;color:var(--av-black)}.view-nav a[aria-current=page]{background:white;color:var(--av-black);border-color:#cecece;border-bottom-color:white;box-shadow:inset 0 2px var(--av-red-deep)}@media print{.view-nav{display:none}}
+.report-chips{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}.report-chips:empty{display:none}.report-chips button{width:auto;min-height:32px;border-color:#e7bcbc;background:#fff3f3;color:#871414;font-weight:800}.matrix th,.matrix td{border-right:1px solid #ddd}.matrix thead th{border-right-color:#555}.matrix thead .history{background:#383d46}.matrix tbody tr .history{background:#f0f2f5}.matrix tbody tr:nth-child(even) .history{background:#e8ecf1}.matrix .total .history{background:#e4e8ee}.matrix .daily-start{border-left:2px solid #8f959d}.matrix .name{box-shadow:1px 0 #b9b9b9}@media print{.report-chips{display:none}.matrix thead .history{background:#f0f2f5}.matrix th,.matrix td{border-right-color:#ddd}}
+.matrix .monthly-summary th,.matrix .monthly-summary td{background:#262626;color:white;border-right-color:#555;border-bottom-color:#555}
+.matrix .monthly-summary{--summary-color:#1749a3;--summary-line:#3c67b2}
+.matrix .monthly-summary.average-price{--summary-color:#007455;--summary-line:#2e8c73}
+.matrix .monthly-summary .name,.matrix .monthly-summary .history,.matrix .monthly-summary .subtotal{background:var(--summary-color);color:white;font-weight:900;border-color:var(--summary-line)}
+.matrix .monthly-summary .name{white-space:nowrap}
+.matrix .monthly-summary .summary-gap{border:0;background:var(--summary-color)}
+.matrix .total th{border-top:2px solid #871414;border-bottom:2px solid #871414}
+.matrix .total th:first-child{border-left:2px solid #871414}
+.matrix .total th:last-child{border-right:2px solid #871414}
+.report-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}.report-heading h1{font-size:clamp(20px,2.5vw,34px);line-height:1.15}.report-heading img{flex:none;width:clamp(90px,13vw,170px);margin:0}
+@media screen and (min-width:821px) and (min-height:550px){main{height:100dvh;display:flex;flex-direction:column;min-height:0;padding-bottom:12px}main>header,main>form,#estado{flex:none}.matrix{flex:1;min-height:0;max-height:none}#estado:empty{display:none}}
+@media print{.report-heading img{width:110px}}
+.trend{white-space:nowrap;text-align:left}.trend span{display:inline-block;padding:3px 6px;border-radius:5px;font-weight:800}.trend-up{background:#e0f5e8;color:#126039}.trend-down{background:#fbe3e4;color:#8e151c}.trend-flat{background:#ffdb55;color:#513700}.trend-na{background:#ededed;color:#555}
+.matrix td,.matrix th:not(.name){text-align:center}
+.matrix .client-speed{border-left:2px solid #8f959d;font-weight:900}
+.executive{flex:none;margin:0 0 12px;border:1px solid var(--av-line);border-radius:10px;background:white;padding:10px 12px}
+.executive summary{font:900 18px var(--av-font-title);cursor:pointer}.executive p{font-size:13px}.executive-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.executive-card{padding:9px;border:1px solid var(--av-line);border-radius:8px;font-size:13px}.executive-card h2{font-size:16px;margin:0}.executive-card ul{padding-left:18px;margin:5px 0}.executive-card li{margin:3px 0}.exec-up{color:#126039}.exec-down{color:#8e151c}
+@media screen and (min-width:821px) and (min-height:550px){.executive[open]{max-height:32vh;overflow:auto}}
+@media(max-width:820px){.executive-grid{grid-template-columns:1fr}}
+@media print{.executive-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.executive-card{break-inside:avoid}}
+@media(max-width:560px){.view-nav a{padding-inline:6px;font-size:13px}}
+.searchable-filter{min-width:0;max-width:100%;width:100%;min-height:40px;padding:6px 9px;border:1px solid var(--av-line);border-radius:8px;background:white;color:var(--av-black)}
+.inspector-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.inspector-grid .card{border-top:3px solid var(--av-red-deep)}.inspector-list{max-height:350px;overflow:auto}.inspector-row{padding:6px 2px;border-bottom:1px solid #eee;font-size:13px}.inspector-label{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px}.inspector-track{display:flex;height:9px;border-radius:8px;overflow:hidden;background:#eee}.inspector-legend{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0;font-size:12px}.inspector-legend span{display:inline-flex;align-items:center;gap:4px}.inspector-legend i{width:9px;height:9px;border-radius:2px}
+@media screen and (max-width:700px){.inspector-grid{grid-template-columns:1fr}}
+@media print{.inspector-list{max-height:none;overflow:visible}.inspector-row{break-inside:avoid}.inspector-track{print-color-adjust:exact}}
+.speed-section{margin:12px 0}.speed-section h2{font-size:20px}.speed-table{overflow:auto;background:white;border:1px solid var(--av-line);border-radius:10px}.speed-table th,.speed-table td{text-align:center;border-right:1px solid #ddd}.speed-table th:first-child{text-align:left}.speed-table thead th{background:#262626;color:white}.speed-table .speed-divider{border-left:3px solid #777}.speed-table tbody th{background:#f4f4f4}.speed-section .card{background:white;border:1px solid var(--av-line);border-top:3px solid var(--av-red-deep);border-radius:10px;padding:12px;min-width:0}.speed-section h3{font-size:16px;margin:0}.speed-mode main{height:auto;display:block}.speed-mode .matrix{max-height:70vh}.speed-caption{font-size:13px;color:var(--av-gray)}
+@media print{.speed-mode .matrix{max-height:none}.speed-section h2{break-after:avoid}.speed-table{overflow:visible}}
+@media print{.trend span{print-color-adjust:exact;-webkit-print-color-adjust:exact;border:1px solid currentColor;white-space:nowrap}}
+</style>
+<main>
+<header>
+  <nav class="view-nav actions" aria-label="Visões do BI">
+    <a href="/">Visão Geral</a>
+    <a href="/relatorio-cliente" aria-current="page">Visão por Cliente</a>
+    <a href="/gerencial">Visão Gerencial</a>
+    <a href="/vistoriadores">Visão por Vistoriadores</a>
+    <a href="/speed">Speed Diário</a>
+  </nav>
+  <div class="report-heading">
+    <h1>Acompanhamento de vendas por cliente</h1>
+    <img src="/logo-auto-visao.png" alt="Auto Visão Vistorias Automotivas">
+  </div>
+  <p id="resumo"></p>
+  <details><summary>Como a tendência é calculada?</summary><p>Compara serviços por dia útil no mês de referência com a média por dia útil dos três meses anteriores. Variação de 15% ou mais indica crescimento. Queda de 15% ou mais indica declínio. Entre esses limites, o cliente fica estabilizado. Sem base histórica ou antes de cinco dias úteis, a tendência fica sem base.</p></details>
+  <div class="report-chips" id="ativos-relatorio" aria-label="Filtros ativos"></div>
+</header>
+<form>
+  <label>Vendedor<select name="vendedor"><option value="">Todos os vendedores</option></select></label>
+  <label>Unidade<select name="unidade"><option value="">Todas as unidades</option></select></label>
+  <label>Data de corte<input type="date" name="fim" required></label>
+  <button type="submit">Atualizar relatório</button>
+  <button type="button" id="imprimir" disabled>Imprimir / salvar em PDF</button>
+</form>
+<p id="estado" role="status"></p>
+<section id="speed-resumo" class="speed-section" hidden>
+  <h2>Speed do mês</h2>
+  <p id="speed-dias" class="speed-caption"></p>
+  <div class="speed-table"><table id="speed-indicadores"></table></div>
+  <p class="speed-caption">Quantidade e Faturamento projetam o ritmo por dia útil. O Preço Médio projetado mantém o valor observado até a data.</p>
+</section>
+<section id="speed-vistoriadores" class="speed-section" hidden>
+  <h2>Vistoriadores</h2>
+  <div class="inspector-grid"></div>
+</section>
+<h2 id="speed-clientes" hidden>Clientes</h2>
+<details id="executivo" class="executive" hidden>
+  <summary>Resumo executivo da carteira</summary>
+  <div id="executivo-conteudo"></div>
+</details>
+<div id="resultado" class="matrix" tabindex="0" aria-label="Matriz de quantidade por cliente" hidden><table></table></div>
+</main>
+<script src="/filtros.js"></script>
+<script src="/graficos_vistoriadores.js"></script>
+<script>
+const form=document.querySelector('form');
+const speed=location.pathname==='/speed';
+if(speed) {
+  document.body.classList.add('speed-mode');
+  document.title='Speed Diário | Auto Visão';
+  document.querySelector('h1').textContent='Speed Diário';
+  document.querySelector('[aria-current=page]').removeAttribute('aria-current');
+  document.querySelector('a[href="/speed"]').setAttribute('aria-current','page');
+}
+const result=document.querySelector('#resultado');
+const printButton=document.querySelector('#imprimir');
+const statusLine=document.querySelector('#estado');
+const integer=new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0});
+const average=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const currency=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const variation=new Intl.NumberFormat('pt-BR',{signDisplay:'exceptZero',maximumFractionDigits:1});
+const trendStyles={'Crescimento':'up','Declínio':'down','Estabilidade':'flat','Sem base':'na'};
+const date=value=>value.split('-').reverse().join('/');
+const executive=document.querySelector('#executivo');
+function executiveSummary(data) {
+  const content=document.querySelector('#executivo-conteudo');
+  content.replaceChildren();
+  executive.hidden=false;
+  if(!data) {
+    cell(content,'p','Comparativo indisponível. É preciso ter vendas nos meses anteriores e pelo menos cinco dias úteis no mês de referência.');
+    return;
+  }
+  const signed=(value,format)=> (value>0?'+':value<0?'−':'')+format(Math.abs(value));
+  const money=cents=>currency.format(cents/100);
+  const quantity=value=>integer.format(value)+' serviços';
+  const grid=cell(content,'div','','executive-grid');
+  for(const [title,current,baseline,format,drivers,isPrice] of [
+    ['Quantidade',data.quantidade,data.esperado,quantity,data.volume,false],
+    ['Receita',data.receita,data.receitaEsperada,money,data.receitas,false],
+    ['Preço Médio',data.preco,data.precoAnterior,money,data.precos,true],
+  ]) {
+    const card=cell(grid,'section','','executive-card');
+    cell(card,'h2',title);
+    if(current===null) {
+      cell(card,'p','Sem vendas no mês de referência.');
+      continue;
+    }
+    cell(card,'p',(isPrice?'PM do Speed: ':'Speed mês: ')+format(current)+' vs. '+format(baseline)+' de referência ('+signed(current-baseline,format)+')');
+    for(const [key,heading] of [['altas','Maiores contribuições de alta'],['quedas','Maiores contribuições de queda']]) {
+      if(!drivers[key].length) continue;
+      cell(card,'strong',heading,key==='altas'?'exec-up':'exec-down');
+      const list=cell(card,'ul','');
+      for(const [name,impact,actual,expected] of drivers[key]) {
+        const detail=isPrice
+          ? ' · PM do cliente '+(expected===null?'—':money(expected))+' → '+(actual===null?'—':money(actual))
+          : ' · Speed '+format(actual)+' vs. '+format(expected)+' de referência';
+        cell(list,'li',name+' · '+signed(impact,format)+detail);
+      }
+    }
+  }
+  const volume=data.volume.quedas[0]?.[0],revenue=data.receitas.quedas[0]?.[0],price=data.precos.quedas[0]?.[0];
+  const actions=[];
+  if(volume) actions.push('retomar contato com '+volume+' pela queda de volume');
+  if(revenue && revenue!==volume) actions.push('revisar a perda de receita em '+revenue);
+  if(price) actions.push('conferir preços e mix de serviços em '+price);
+  if(actions.length) cell(content,'p','Follow-up sugerido: '+actions.join(' · ')+'.');
+  cell(content,'p','O Speed projeta o ritmo atual para todos os dias úteis do mês. A referência aplica o ritmo dos três meses anteriores ao mesmo número de dias úteis. O Preço Médio projetado mantém o valor observado. As contribuições de Preço Médio combinam preço e participação de cada cliente na carteira.');
+}
+const filterLabels={vendedor:'Vendedor',unidade:'Unidade',fim:'Data de corte'};
+function chips(data) {
+  const applied={...data.filtros,fim:data.fim};
+  const nodes=[];
+  for(const [key,label] of Object.entries(filterLabels)) {
+    const value=applied[key];
+    if(!value || (key==='fim' && value===data.ultima)) continue;
+    const button=document.createElement('button');
+    button.type='button';
+    const text=label+' · '+(key==='fim'?date(value):value);
+    button.textContent=text+' ×';
+    button.setAttribute('aria-label','Remover filtro '+text);
+    button.addEventListener('click',()=>{
+      const params=new URLSearchParams(applied);
+      params.delete(key);
+      refresh(params);
+    });
+    nodes.push(button);
+  }
+  document.querySelector('#ativos-relatorio').replaceChildren(...nodes);
+}
+function cell(row,tag,value,cls) {
+  const node=document.createElement(tag);
+  node.textContent=value;
+  if(cls) node.className=cls;
+  row.append(node);
+  return node;
+}
+function renderSpeed(data) {
+  const {speed:summary}=data;
+  const table=document.querySelector('#speed-indicadores');
+  table.replaceChildren();
+  const head=table.createTHead().insertRow();
+  const headers=['Indicador','Transferência','Cautelar','Outros','Total até a data','Speed Transf.','Speed Cautelar','Speed mês'];
+  headers.forEach((label,i)=>{cell(head,'th',label,[4,5,7].includes(i)?'speed-divider':'').scope='col';});
+  const body=table.createTBody();
+  for(const [index,title] of ['Quantidade','Preço Médio','Faturamento'].entries()) {
+    const row=body.insertRow();
+    cell(row,'th',title).scope='row';
+    summary.linhas[index].forEach((value,i)=>{
+      const text=value===null?'—':index===0?integer.format(value):currency.format(value/100);
+      cell(row,'td',text,[3,4,6].includes(i)?'speed-divider':'');
+    });
+  }
+  document.querySelector('#speed-dias').textContent='Início em '+date(summary.inicio)+' · '+summary.dias+' de '+summary.diasMes+' dias úteis';
+  document.querySelector('#speed-vistoriadores .inspector-grid').replaceChildren(...inspectorCharts(data.vistoriadores));
+  for(const id of ['speed-resumo','speed-vistoriadores','speed-clientes'])document.getElementById(id).hidden=false;
+}
+function matrix(data) {
+  const table=result.querySelector('table');
+  table.replaceChildren();
+  const head=table.createTHead();
+  for(const [index,title] of ['Venda Média Dia','Preço Médio'].entries()) {
+    const summary=head.insertRow();
+    summary.className=index===0?'monthly-summary':'monthly-summary average-price';
+    cell(summary,'th',title,'name').scope='row';
+    cell(summary,'td','','summary-gap');
+    const values=data.resumoMensal.map(values=>values[index]);
+    const format=value=>value===null?'—':index===0?integer.format(value):average.format(value/100);
+    for(const value of values.slice(0,3)) cell(summary,'td',format(value),'history');
+    if(data.dias.length) cell(summary,'td','','summary-gap').colSpan=data.dias.length;
+    cell(summary,'td',format(values[3]),'subtotal');
+    cell(summary,'td','','summary-gap');
+  }
+  const groups=head.insertRow();
+  const client=cell(groups,'th','Cliente','name');
+  client.rowSpan=2;
+  client.scope='col';
+  const trend=cell(groups,'th','Tendência','trend');
+  trend.rowSpan=3;
+  trend.scope='col';
+  cell(groups,'th','3 meses anteriores','history').colSpan=3;
+  cell(groups,'th','Mês de referência · dia a dia','daily-start').colSpan=data.dias.length+2;
+  const columns=head.insertRow();
+  for(const month of data.meses) cell(columns,'th',month.slice(5)+'/'+month.slice(2,4),'history').scope='col';
+  data.dias.forEach((day,i)=>cell(columns,'th',day.slice(8)+'/'+day.slice(5,7),i===0?'daily-start':'').scope='col');
+  cell(columns,'th','Total','subtotal').scope='col';
+  cell(columns,'th','Speed','client-speed').scope='col';
+  const totals=head.insertRow();
+  totals.className='total';
+  cell(totals,'th','Total geral','name').scope='row';
+  data.totais.forEach((count,i)=>cell(totals,'th',integer.format(count),i<3?'history':i===3?'daily-start':''));
+  cell(totals,'th',data.speedTotal===null?'—':integer.format(data.speedTotal),'client-speed');
+  const body=table.createTBody();
+  for(const [index,[name,...counts]] of data.clientes.entries()) {
+    const row=body.insertRow();
+    cell(row,'th',name,'name').scope='row';
+    const [label,delta]=data.tendencias[index];
+    const badge=document.createElement('span');
+    badge.className='trend-'+trendStyles[label];
+    badge.textContent=label+(delta===null?'':' '+variation.format(delta)+'%');
+    cell(row,'td','','trend').append(badge);
+    counts.forEach((count,i)=>cell(row,'td',integer.format(count),[
+      i<3?'history':i===3?'daily-start':'',
+      i===counts.length-1?'subtotal':'',
+      count===0?'zero':'',
+    ].join(' ')));
+    const projected=data.speedClientes[index];
+    cell(row,'td',projected===null?'—':integer.format(projected),'client-speed');
+  }
+}
+let initialized=false,revision=0;
+async function refresh(params) {
+  syncSearchFilters(form);
+  const current=++revision;
+  result.hidden=true;
+  executive.hidden=true;
+  for(const id of ['speed-resumo','speed-vistoriadores','speed-clientes'])document.getElementById(id).hidden=true;
+  printButton.disabled=true;
+  statusLine.textContent='Carregando…';
+  try {
+    const response=await fetch((speed?'/api/speed?':'/api/relatorio-cliente?')+params);
+    if(!response.ok) throw Error('Selecione unidade ou vendedor e uma data dentro da carga histórica.');
+    const data=await response.json();
+    if(current!==revision) return;
+    if(!initialized) {
+      for(const [key,values] of Object.entries(data.opcoes)) {
+        for(const value of values) form.elements[key].add(new Option(value,value));
+      }
+      form.elements.fim.min=data.primeira;
+      form.elements.fim.max=data.ultima;
+      initialized=true;
+    }
+    for(const [key,value] of Object.entries(data.filtros)) form.elements[key].value=value;
+    form.elements.fim.value=data.fim;
+    syncSearchFilters(form);
+    chips(data);
+    document.querySelector('#resumo').textContent='Quantidade de serviços · Corte em '+date(data.fim);
+    if(speed) {
+      document.querySelector('#resumo').textContent='Apuração em '+date(data.fim);
+      renderSpeed(data);
+      printButton.disabled=false;
+    }
+    statusLine.textContent=data.clientes.length?'':'Sem vendas no período.';
+    if(!data.clientes.length) return;
+    matrix(data);
+    executiveSummary(data.executivo);
+    result.hidden=false;
+    printButton.disabled=false;
+  } catch(error) {
+    if(current===revision) statusLine.textContent=error.message;
+  }
+}
+form.addEventListener('submit',event=>{
+  event.preventDefault();
+  refresh(new URLSearchParams(new FormData(form)));
+});
+form.addEventListener('change',event=>{
+  const other={unidade:'vendedor',vendedor:'unidade'}[event.target.name];
+  if(other && event.target.value) {
+    form.elements[other].value='';
+    syncSearchFilters(form);
+  }
+  revision++;
+  result.hidden=true;
+  executive.hidden=true;
+  printButton.disabled=true;
+  statusLine.textContent='Atualize o relatório para aplicar a seleção.';
+  for(const id of ['speed-resumo','speed-vistoriadores','speed-clientes'])document.getElementById(id).hidden=true;
+});
+printButton.addEventListener('click',()=>{
+  const open=executive.open;
+  executive.open=true;
+  print();
+  executive.open=open;
+});
+makeSearchableFilters(form,['vendedor','unidade']);
+refresh(new URLSearchParams(location.search));
+</script>
+</html>
