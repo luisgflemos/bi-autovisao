@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("BI_PORT") or os.environ.get("PORT") or "8765")
 HOST = os.environ.get("BI_HOST", "127.0.0.1")
 DATABASE = Path(os.environ.get("BI_DATABASE", ROOT / "vendas.sqlite3")).resolve()
-ACESSO = acesso.Acesso()
+ACESSO = acesso.Acesso(banco_usuarios=DATABASE.with_name("usuarios.sqlite3"))
 TOKEN_IMPORTACAO = os.environ.get("BI_TOKEN_IMPORTACAO", "")
 LIMITE_BASE = 2 * 1024 ** 3
 # Rotas liberadas sem login: página de entrada, banner de prévia de link e recursos visuais.
@@ -489,6 +489,10 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self.redirect("/login?proximo=" + quote(self.path, safe=""))
             return
+        if url.path == "/api/sessao":
+            usuario = logado if isinstance(logado, str) else None
+            self.reply(json.dumps({"usuario": usuario}).encode(), "application/json; charset=utf-8")
+            return
         if url.path.startswith("/api/") and not DATABASE.is_file():
             self.reply(b'{"erro":"base ainda nao carregada"}', "application/json; charset=utf-8", 503)
             return
@@ -514,8 +518,14 @@ class Handler(BaseHTTPRequestHandler):
         self.redirect(proximo, ACESSO.cabecalho_cookie(ACESSO.criar_sessao(usuario)))
 
     def do_PUT(self):
-        """Importação única da base: PUT /admin/base com Authorization: Bearer BI_TOKEN_IMPORTACAO."""
-        if urlsplit(self.path).path != "/admin/base" or not TOKEN_IMPORTACAO:
+        """Carga de arquivo com Authorization: Bearer BI_TOKEN_IMPORTACAO.
+
+        PUT /admin/base troca a base de vendas; PUT /admin/usuarios troca o banco de usuários.
+        """
+        alvos = {"/admin/base": (DATABASE, "fato_item_orcamento"),
+                 "/admin/usuarios": (Path(ACESSO.banco_usuarios), "usuario")}
+        alvo = alvos.get(urlsplit(self.path).path)
+        if not alvo or not TOKEN_IMPORTACAO:
             self.send_error(404)
             return
         if not secrets.compare_digest(self.headers.get("Authorization", ""), f"Bearer {TOKEN_IMPORTACAO}"):
@@ -525,8 +535,9 @@ class Handler(BaseHTTPRequestHandler):
         if not 0 < size <= LIMITE_BASE:
             self.send_error(411 if not size else 413)
             return
-        DATABASE.parent.mkdir(parents=True, exist_ok=True)
-        fd, temp = tempfile.mkstemp(dir=DATABASE.parent, suffix=".import")
+        destino, tabela = alvo
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        fd, temp = tempfile.mkstemp(dir=destino.parent, suffix=".import")
         try:
             with os.fdopen(fd, "wb") as out:
                 remaining = size
@@ -539,14 +550,14 @@ class Handler(BaseHTTPRequestHandler):
             with closing(sqlite3.connect(Path(temp).as_uri() + "?mode=ro", uri=True)) as db:
                 if db.execute("PRAGMA quick_check").fetchone()[0] != "ok":
                     raise ValueError("base corrompida")
-                db.execute("SELECT COUNT(*) FROM fato_item_orcamento").fetchone()
-            os.replace(temp, DATABASE)
+                db.execute(f"SELECT COUNT(*) FROM {tabela}").fetchone()
+            os.replace(temp, destino)
         except (ValueError, sqlite3.DatabaseError) as error:
             Path(temp).unlink(missing_ok=True)
             self.reply(f"falha: {error}".encode(), "text/plain; charset=utf-8", 400)
             return
-        print(f"Base importada ({size} bytes)", flush=True)
-        self.reply(b"base importada", "text/plain; charset=utf-8")
+        print(f"{destino.name} importado ({size} bytes)", flush=True)
+        self.reply(f"{destino.name} importado".encode(), "text/plain; charset=utf-8")
 
     def serve_get(self, url):
         database = DATABASE
@@ -587,6 +598,7 @@ class Handler(BaseHTTPRequestHandler):
             "/logo-auto-visao.png": ("Logo_AutoVisao_PNG.png", "image/png"),
             "/og-banner.png": ("og-banner.png", "image/png"),
             "/filtros.js": ("filtros.js", "text/javascript; charset=utf-8"),
+            "/sessao.js": ("sessao.js", "text/javascript; charset=utf-8"),
             "/design-system.css": ("design-system.css", "text/css; charset=utf-8"),
             "/assets/fonts/fonts.css": ("assets/fonts/fonts.css", "text/css; charset=utf-8"),
             **{f"/assets/fonts/auto-visao-font-{i}.ttf":
@@ -617,6 +629,13 @@ def safe_next(value):
 if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--gerar-usuario":
         acesso.gerar_usuario_cli(sys.argv[2])
+        raise SystemExit(0)
+    if len(sys.argv) in (3, 4) and sys.argv[1] == "--criar-usuario":
+        import getpass
+        senha = os.environ.get("BI_NOVA_SENHA") or getpass.getpass(f"Senha para {sys.argv[2]}: ")
+        papel = sys.argv[3] if len(sys.argv) == 4 else "leitor"
+        acesso.gravar_usuario(ACESSO.banco_usuarios, sys.argv[2], senha, papel)
+        print(f"Usuário {sys.argv[2].lower()} ({papel}) gravado em {ACESSO.banco_usuarios}")
         raise SystemExit(0)
     if not DATABASE.is_file() and not TOKEN_IMPORTACAO:
         raise SystemExit("Base SQLite ausente. Confira BI_DATABASE.")

@@ -31,3 +31,19 @@ curl -X PUT -H "Authorization: Bearer $BI_TOKEN_IMPORTACAO" --data-binary @dados
 ```
 
 A base é validada antes de substituir a atual. Remova `BI_TOKEN_IMPORTACAO` depois da carga para desligar a rota.
+
+## Usuários no banco
+
+Os logins ficam na tabela `usuario` de `usuarios.sqlite3`, ao lado da base de vendas (no Railway: `/data/usuarios.sqlite3`). O arquivo é separado para que uma nova carga de vendas não apague os usuários. Para criar ou trocar a senha de alguém:
+
+```
+BI_DATABASE=dados/vendas.sqlite3 python app/painel.py --criar-usuario NOME admin
+```
+
+O papel pode ser `admin` ou `leitor`. Para subir o arquivo ao servidor, use `PUT /admin/usuarios` com o mesmo token da carga da base.
+
+## Hospedagem: site na Vercel, API e bancos no Railway
+
+- **Railway** roda `app/painel.py` pelo `Dockerfile`, com volume em `/data` (base de vendas e usuários).
+- **Vercel** publica as telas estáticas (`web/build.sh` gera `dist/`) e repassa `/api/*`, `/login` e `/logout` ao Railway pelo `vercel.json`. Como tudo passa pelo mesmo domínio, o cookie de login funciona sem CORS.
+- O domínio `bi.autovisao.com` aponta para a Vercel. Se a URL do Railway mudar, atualize as três rotas em `vercel.json`.

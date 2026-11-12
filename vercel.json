@@ -1,0 +1,32 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "sh web/build.sh",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://bi-production-c015b246.up.railway.app/api/:path*" },
+    { "source": "/login", "destination": "https://bi-production-c015b246.up.railway.app/login" },
+    { "source": "/logout", "destination": "https://bi-production-c015b246.up.railway.app/logout" },
+    { "source": "/", "destination": "/painel.html" },
+    { "source": "/relatorio-cliente", "destination": "/relatorio_cliente.html" },
+    { "source": "/speed", "destination": "/relatorio_cliente.html" },
+    { "source": "/gerencial", "destination": "/gerencial.html" },
+    { "source": "/vistoriadores", "destination": "/gerencial.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "same-origin" },
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000" }
+      ]
+    },
+    {
+      "source": "/((?!assets/|og-banner.png|logo-auto-visao.png|Logo_AutoVisao_PNG.png).*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    }
+  ]
+}
