@@ -32,7 +32,7 @@ def format_number(value, money=False):
     return f"{value:,}".replace(",", ".")
 
 
-def comparison_page(db, query):
+def comparison_page(db, query, can_import=False):
     header = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Realizado × Meta</title><link rel="stylesheet" href="/design-system.css">
@@ -46,6 +46,43 @@ def comparison_page(db, query):
     </style></head><body><main><nav class="view-nav" aria-label="Visões do BI">
     <a href="/">Visão Geral</a><a href="/realizado-meta" aria-current="page">Realizado × Meta</a>
     </nav><h1>Realizado × Meta</h1>"""
+    if can_import:
+        header += """<details><summary>Importar metas</summary>
+        <p>Envie um arquivo SQLite com o conjunto completo de metas. A importação substitui as metas cadastradas.</p>
+        <form id="importar-metas">
+          <label>Arquivo de metas <input type="file" accept=".sqlite3,.sqlite,.db" required></label>
+          <button>Importar metas</button>
+        </form>
+        <p id="resultado-importacao" role="status"></p>
+        <script>
+        document.querySelector('#importar-metas').addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const button = form.querySelector('button');
+          const status = document.querySelector('#resultado-importacao');
+          button.disabled = true;
+          status.textContent = 'Validando e importando…';
+          try {
+            const response = await fetch('/api/importar-metas', {
+              method: 'PUT',
+              headers: {'Content-Type': 'application/octet-stream'},
+              body: form.querySelector('input').files[0]
+            });
+            if (response.ok) {
+              status.textContent = 'Metas importadas.';
+              window.location.reload();
+            } else if (response.status === 400) {
+              status.textContent = await response.text();
+            } else {
+              status.textContent = 'Importação recusada. Confira sua sessão e o tamanho do arquivo (até 4 MB).';
+            }
+          } catch {
+            status.textContent = 'Falha na conexão. Confira o comparativo antes de tentar novamente.';
+          } finally {
+            button.disabled = false;
+          }
+        });
+        </script></details>"""
     footer = "</main></body></html>"
     exists = db.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta_produto_vistoriador' "

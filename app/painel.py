@@ -558,15 +558,28 @@ class Handler(BaseHTTPRequestHandler):
         alvos = {"/admin/base": (DATABASE, "fato_item_orcamento"),
                  "/admin/metas": (target_database_path(), "meta_produto_vistoriador"),
                  "/admin/usuarios": (Path(ACESSO.banco_usuarios), "usuario")}
-        alvo = alvos.get(urlsplit(self.path).path)
-        if not alvo or not TOKEN_IMPORTACAO:
-            self.send_error(404)
+        path = urlsplit(self.path).path
+        admin = None
+        if path == "/api/importar-metas":
+            admin = ACESSO.administrador_da_sessao(self.headers.get("Cookie"))
+            if not admin or self.headers.get("Sec-Fetch-Site") != "same-origin":
+                self.send_error(403)
+                return
+            alvo = alvos["/admin/metas"]
+        else:
+            alvo = alvos.get(path)
+            if not alvo or not TOKEN_IMPORTACAO:
+                self.send_error(404)
+                return
+            if not secrets.compare_digest(self.headers.get("Authorization", ""), f"Bearer {TOKEN_IMPORTACAO}"):
+                self.send_error(403)
+                return
+        try:
+            size = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            self.send_error(400)
             return
-        if not secrets.compare_digest(self.headers.get("Authorization", ""), f"Bearer {TOKEN_IMPORTACAO}"):
-            self.send_error(403)
-            return
-        size = int(self.headers.get("Content-Length") or 0)
-        if not 0 < size <= LIMITE_BASE:
+        if not 0 < size <= (4 * 1024 ** 2 if admin else LIMITE_BASE):
             self.send_error(411 if not size else 413)
             return
         destino, tabela = alvo
@@ -587,6 +600,7 @@ class Handler(BaseHTTPRequestHandler):
                     out.write(chunk)
                     remaining -= len(chunk)
             with closing(sqlite3.connect(Path(temp).as_uri() + "?mode=ro", uri=True)) as db:
+                db.execute("PRAGMA trusted_schema=OFF")
                 if db.execute("PRAGMA quick_check").fetchone()[0] != "ok":
                     raise ValueError("base corrompida")
                 if tabela == "meta_produto_vistoriador":
@@ -611,7 +625,7 @@ class Handler(BaseHTTPRequestHandler):
             Path(temp).unlink(missing_ok=True)
             self.reply(f"falha: {error}".encode(), "text/plain; charset=utf-8", 400)
             return
-        print(f"{destino.name} importado ({size} bytes)", flush=True)
+        print(f"{destino.name} importado ({size} bytes), usuário={admin!r}", flush=True)
         self.reply(f"{destino.name} importado".encode(), "text/plain; charset=utf-8")
 
     def serve_get(self, url):
@@ -623,7 +637,8 @@ class Handler(BaseHTTPRequestHandler):
                 if attach_targets(db):
                     db.execute("CREATE TEMP VIEW meta_produto_vistoriador AS "
                                "SELECT * FROM metas.meta_produto_vistoriador")
-                page = comparison_page(db, parse_qs(url.query))
+                admin = ACESSO.administrador_da_sessao(self.headers.get("Cookie"))
+                page = comparison_page(db, parse_qs(url.query), can_import=bool(admin))
             self.reply(page.encode("utf-8"), "text/html; charset=utf-8")
             return
         database = DATABASE
