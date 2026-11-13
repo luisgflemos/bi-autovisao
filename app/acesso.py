@@ -153,6 +153,20 @@ class Acesso:
             return None
         return usuario if usuario in self.usuarios else None
 
+    def administrador_da_sessao(self, cookie):
+        usuario = self.usuario_da_sessao(cookie)
+        if not usuario or not self.banco_usuarios or not Path(self.banco_usuarios).is_file():
+            return None
+        try:
+            with closing(sqlite3.connect(Path(self.banco_usuarios).resolve().as_uri() + "?mode=ro", uri=True)) as db:
+                admin = db.execute(
+                    "SELECT 1 FROM usuario WHERE lower(nome)=? AND ativo=1 AND papel='admin'",
+                    (usuario,),
+                ).fetchone()
+            return usuario if admin else None
+        except sqlite3.DatabaseError:
+            return None
+
     def cabecalho_cookie(self, valor, max_age=DURACAO_SESSAO):
         atributos = [f"{COOKIE}={valor}", "Path=/", "HttpOnly", "SameSite=Lax", f"Max-Age={max_age}"]
         if self.cookie_seguro:
