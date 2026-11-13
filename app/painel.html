@@ -89,6 +89,10 @@ button.bar:hover,button.bar[aria-pressed=true]{background:var(--av-red-soft)}.ba
 .ranking-reference[data-mode=meta]{color:#155ab5}
 .ranking-marker{position:absolute;top:-3px;bottom:-3px;width:3px;background:#303030;transform:translateX(-50%);border:1px solid white;box-sizing:content-box}
 .ranking-marker[data-mode=meta]{background:#155ab5}
+.ranking-marker[data-mode=ytd]{top:50%;bottom:auto;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);background:#656565}
+.ranking-marker[data-mode=ytd].positive{background:#137547}
+.ranking-marker[data-mode=ytd].negative{background:var(--av-red-deep)}
+.ranking-delta{font-weight:800}
 .bars[data-metric] button.bar:hover,.bars[data-metric] button.bar[aria-pressed=true]{background:var(--bar-highlight);border-bottom-color:var(--bar-color)}
 .cards[hidden]{display:none}
 </style>
@@ -292,6 +296,8 @@ function bars(id, rows, metric=id) {
   const values=rows.map(row=>[row[0],metricValue(row)]).sort((a,b)=>b[1]-a[1]);
   const max=Math.max(1,...values.map(([name,value])=>Math.max(Math.abs(value),Math.abs(references.get(name) ?? 0))));
   const format=metric==='quantidade'?integer:money;
+  const signedFormat=new Intl.NumberFormat('pt-BR',{...format.resolvedOptions(),signDisplay:'exceptZero'});
+  const signedPercent=new Intl.NumberFormat('pt-BR',{style:'percent',maximumFractionDigits:1,signDisplay:'exceptZero'});
   const nodes=values.map(([name,value])=>{
     const row=element(select?'button':'div',undefined,'bar');
     if(select) {
@@ -316,6 +322,13 @@ function bars(id, rows, metric=id) {
       if(reference!=null) {
         const marker=element('span',undefined,'ranking-marker');
         marker.dataset.mode=mode;
+        if(mode==='ytd') {
+          const delta=value-reference;
+          const direction=delta>0?'positive':delta<0?'negative':'';
+          if(direction) marker.classList.add(direction);
+          const percent=reference===0?'': ' ('+signedPercent.format(delta/Math.abs(reference))+')';
+          caption.append(element('span',' · '+signedFormat.format(delta)+percent,'ranking-delta '+direction));
+        }
         marker.style.left=(100*Math.abs(reference)/max)+'%';
         marker.setAttribute('aria-hidden','true');
         track.append(marker);
