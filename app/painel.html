@@ -51,11 +51,12 @@ button.bar:hover,button.bar[aria-pressed=true]{background:var(--av-red-soft)}.ba
 #indicadores-meta{margin-top:10px}
 .metric.metric-target{border-top-color:#155ab5;background:#f8fbff}
 .metric-target h2{color:#174985}
-.metric-target:has(.target-gauge) > :is(h2,strong,.metric-footer){padding-right:63px}
-.metric-target:has(.target-gauge) .metric-footer .nominal{margin-right:-63px}
-.target-gauge{position:absolute;top:10px;right:10px;width:56px;text-align:center}
-.target-gauge-arc{position:relative;display:block;width:50px;height:25px;margin:auto;overflow:hidden}
-.target-gauge-arc::before{content:"";position:absolute;inset:0 0 -25px;border-radius:50%;background:conic-gradient(from 270deg,#2370c9 0 var(--fill),#dce6f2 var(--fill) 180deg,transparent 180deg);mask:radial-gradient(transparent 56%,black 57%)}
+.metric-target{--gauge-width:64px;--gauge-space:calc(var(--gauge-width) + 7px)}
+.metric-target:has(.target-gauge) > :is(h2,strong,.metric-footer){padding-right:var(--gauge-space)}
+.metric-target:has(.target-gauge) .metric-footer .nominal{margin-right:calc(-1 * var(--gauge-space))}
+.target-gauge{position:absolute;top:10px;right:10px;width:var(--gauge-width);text-align:center}
+.target-gauge-arc{position:relative;display:block;width:58px;height:29px;margin:auto;overflow:hidden}
+.target-gauge-arc::before{content:"";position:absolute;inset:0 0 -100%;border-radius:50%;background:conic-gradient(from 270deg,#2370c9 0 var(--fill),#dce6f2 var(--fill) 180deg,transparent 180deg);mask:radial-gradient(transparent 56%,black 57%)}
 .target-gauge-arc::after{content:"";position:absolute;top:0;left:calc(50% - 1px);width:2px;height:6px;background:#182c46}
 .target-gauge-value{display:block;font-size:12px;font-weight:900;color:#174985;font-variant-numeric:tabular-nums}
 .target-gauge small{font-size:11px}
