@@ -140,9 +140,10 @@ def dashboard(db, query):
         parts = [metrics(date(end.year, 1, 1), end) for end in (pair[previous] for pair in spans)]
         return [sum(part[i] for part in parts) for i in range(2)]
 
-    def ranking(column):
+    def ranking(column, series=0):
         result = {}
-        for end, _ in spans:
+        for pair in spans:
+            end = pair[series]
             for label, count, cents in grouped(column, date(end.year, 1, 1), end):
                 old_count, old_cents = result.get(label, (0, 0))
                 result[label] = (old_count + count, old_cents + cents)
@@ -195,9 +196,9 @@ def dashboard(db, query):
             and attach_targets(db)):
         placeholders = ",".join("?" for _ in target_months)
         unit = query["unidade"][0]
-        filters = [(DIMENSIONS[key], value) for key in ("servico", "grupo")
+        target_filters = [(DIMENSIONS[key], value) for key in ("servico", "grupo")
                    for value in query.get(key, [])[:1]]
-        conditions = "".join(f" AND {column}=?" for column, _ in filters)
+        conditions = "".join(f" AND {column}=?" for column, _ in target_filters)
         rows = db.execute(
             f"""SELECT m.ano_mes, SUM(m.quantidade), SUM(m.faturamento_centavos)
             FROM metas.meta_produto_vistoriador m
@@ -205,7 +206,7 @@ def dashboard(db, query):
             JOIN dim_servico s ON s.id_erp=m.id_servico
             WHERE {DIMENSIONS['unidade']}=? AND m.ano_mes IN ({placeholders}){conditions}
             GROUP BY m.ano_mes""",
-            [unit, *target_months, *(value for _, value in filters)],
+            [unit, *target_months, *(value for _, value in target_filters)],
         )
         detailed_targets = {month: (quantity, revenue) for month, quantity, revenue in rows}
         if detailed_targets and (
@@ -231,6 +232,39 @@ def dashboard(db, query):
         for (year, label), period_months in target_periods.items()
         if all(month in monthly_targets for month in period_months)
     ]
+    ranking_dimensions = {**rankings, "clientes": "cliente"}
+    ranking_targets = {}
+    if target_months:
+        placeholders = ",".join("?" for _ in target_months)
+        for key, dimension in ranking_dimensions.items():
+            rows = []
+            if dimension in ("unidade", "vendedor") and not set(active_dimensions) - {dimension} and db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta_mensal'"
+            ).fetchone():
+                condition = " AND nome=?" if query.get(dimension) else ""
+                rows = db.execute(
+                    f"""SELECT nome, SUM(quantidade), SUM(quantidade*preco_medio_centavos)
+                    FROM meta_mensal WHERE nivel=? AND ano_mes IN ({placeholders}){condition}
+                    GROUP BY nome HAVING COUNT(DISTINCT ano_mes)=?""",
+                    [dimension, *target_months, *query.get(dimension, [])[:1], len(target_months)],
+                ).fetchall()
+            if dimension in ("unidade", "servico", "grupo") and not set(active_dimensions) - {"unidade", "servico", "grupo"}:
+                attached = any(row[1] == "metas" for row in db.execute("PRAGMA database_list"))
+                if attached or attach_targets(db):
+                    conditions = "".join(f" AND {column}=?" for column, _ in filters)
+                    detailed = db.execute(
+                        f"""SELECT {DIMENSIONS[dimension]}, SUM(m.quantidade), SUM(m.faturamento_centavos)
+                        FROM metas.meta_produto_vistoriador m
+                        JOIN dim_unidade u ON u.id_erp=m.id_unidade
+                        JOIN dim_servico s ON s.id_erp=m.id_servico
+                        WHERE m.ano_mes IN ({placeholders}){conditions}
+                        GROUP BY 1 HAVING COUNT(DISTINCT m.ano_mes)=?""",
+                        [*target_months, *values, len(target_months)],
+                    ).fetchall()
+                    if dimension == "unidade" or query.get("unidade"):
+                        by_name = {name: (count, cents) for name, count, cents in [*rows, *detailed]}
+                        rows = [[name, *amounts] for name, amounts in by_name.items()]
+            ranking_targets[key] = rows
     return {
         "anos": available_years, "opcoes": options,
         "meta": target,
@@ -240,6 +274,8 @@ def dashboard(db, query):
         "evolucao": evolution,
         "evolucao_metas": evolution_targets,
         "rankings": {key: ranking(DIMENSIONS[value]) for key, value in rankings.items()},
+        "rankings_ytd": {key: ranking(DIMENSIONS[value], 1) for key, value in ranking_dimensions.items()},
+        "rankings_meta": ranking_targets,
         "clientes": ranking(DIMENSIONS["cliente"]),
     }
 
