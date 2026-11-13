@@ -411,7 +411,7 @@ for(const id of [...Object.keys(rankings),'clientes']) {
   const controls=element('div',undefined,'ranking-modes');
   controls.setAttribute('role','group');
   controls.setAttribute('aria-label','Comparativo de '+panel.querySelector('h2').textContent);
-  for(const [mode,label] of [['realizado','Realizado'],['ytd','YTD'],['meta','Meta']]) {
+  for(const [mode,label] of [['realizado','Real'],['ytd','YTD'],['meta','Meta']]) {
     const button=element('button',label);
     button.type='button';
     button.dataset.mode=mode;
