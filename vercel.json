@@ -12,7 +12,8 @@
     { "source": "/relatorio-cliente", "destination": "/relatorio_cliente.html" },
     { "source": "/speed", "destination": "/relatorio_cliente.html" },
     { "source": "/gerencial", "destination": "/gerencial.html" },
-    { "source": "/vistoriadores", "destination": "/gerencial.html" }
+    { "source": "/vistoriadores", "destination": "/gerencial.html" },
+    { "source": "/realizado-meta", "destination": "https://bi-production-c015b246.up.railway.app/realizado-meta" }
   ],
   "headers": [
     {
