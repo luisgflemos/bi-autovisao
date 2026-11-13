@@ -1,5 +1,27 @@
 from collections import defaultdict
 from html import escape
+from datetime import date
+
+
+def validate_target_database(db):
+    rows = db.execute("""
+        SELECT ano_mes, id_unidade, id_servico, id_vistoriador, quantidade, faturamento_centavos
+        FROM meta_produto_vistoriador
+    """)
+    seen = set()
+    for month, unit, service, inspector, quantity, revenue in rows:
+        if not isinstance(month, str) or date.fromisoformat(month + "-01").isoformat()[:7] != month:
+            raise ValueError("mês inválido")
+        if any(not isinstance(value, str) or not value.strip() for value in (unit, service, inspector)):
+            raise ValueError("identificador inválido")
+        if type(quantity) is not int or quantity <= 0 or type(revenue) is not int or revenue < 0:
+            raise ValueError("quantidade ou faturamento inválido")
+        key = (month, unit, service, inspector)
+        if key in seen:
+            raise ValueError("meta duplicada")
+        seen.add(key)
+    if not seen:
+        raise ValueError("arquivo de metas vazio")
 
 
 def format_number(value, money=False):
