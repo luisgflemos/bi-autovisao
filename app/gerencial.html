@@ -20,7 +20,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%231A1A1A%22/%3E%3Ccircle cx=%2228%22 cy=%2228%22 r=%2215%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%227%22/%3E%3Ccircle cx=%2228%22 cy=%2228%22 r=%226%22 fill=%22%23F20C1F%22/%3E%3Cpath d=%22M39 39l11 11%22 stroke=%22%23fff%22 stroke-width=%227%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/design-system.css">
 <style>
-*{box-sizing:border-box}body{margin:0}main{padding:24px}.heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}.heading img{width:clamp(90px,15vw,170px);height:auto}h1{margin:0;font-size:clamp(24px,3vw,36px)}h2{margin:0;font-size:17px}.filters,.stats{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.filters label{display:grid;gap:4px;font-weight:800;font-size:13px}.filters select,.filters input,.filters button{min-height:40px;border:1px solid var(--av-line);border-radius:8px;background:#fff;padding:6px 9px;max-width:min(390px,85vw)}.filters button{align-self:end;cursor:pointer}.stats span{background:white;border:1px solid var(--av-line);border-radius:7px;padding:6px 9px;font-size:13px}.charts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{background:white;border:1px solid var(--av-line);border-radius:12px;padding:12px;min-width:0}.card svg{display:block;width:100%;height:auto}.card svg text{fill:#444;font:11px var(--av-font-body)}.card svg .value{font-weight:800;fill:#101010}@media(max-width:1100px){.charts{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){main{padding:12px}.charts{grid-template-columns:1fr}}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}main{padding:0}.view-nav,.filters,#status{display:none}.charts{grid-template-columns:repeat(4,minmax(0,1fr))}.card{break-inside:avoid}}
+*{box-sizing:border-box}body{margin:0}main{padding:24px}.heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}.heading img{width:clamp(90px,15vw,170px);height:auto}h1{margin:0;font-size:clamp(24px,3vw,36px)}h2{margin:0;font-size:17px}.filters,.stats{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.filters label{display:grid;gap:4px;font-weight:800;font-size:13px}.filters select,.filters input,.filters button{min-height:40px;border:1px solid var(--av-line);border-radius:8px;background:#fff;padding:6px 9px;max-width:min(390px,85vw)}.filters button{align-self:end;cursor:pointer}.stats span{background:white;border:1px solid var(--av-line);border-radius:7px;padding:6px 9px;font-size:13px}.charts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{background:white;border:1px solid var(--av-line);border-radius:12px;padding:12px;min-width:0}.card svg{display:block;width:100%;height:auto}.card svg text{fill:#444;font:11px var(--av-font-body)}.card svg .value{font-weight:800;fill:#101010}@media(max-width:1100px){.charts{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){main{padding:12px}.charts{grid-template-columns:1fr}}@page{size:A4 landscape}@media print{body{background:#fff}main{padding:0}.view-nav,.filters,#status{display:none}.charts{grid-template-columns:repeat(4,minmax(0,1fr))}.card{break-inside:avoid}}
 .chips{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}.chips:empty,#status:empty{display:none}.chips button{min-height:32px;border:1px solid #e7bcbc;border-radius:8px;background:#fff3f3;color:#871414;font-weight:800;padding:4px 9px;cursor:pointer}.context{color:var(--av-gray);font-size:13px;margin:8px 0 14px}.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}.chart-group{min-width:0}.chart-group:first-child{grid-column:1/-1}.chart-group>h2{font-size:19px;margin:0 0 7px}.group-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chart-group:first-child .group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.card{padding:14px}.card h3{margin:0;font-size:16px}.card svg{max-height:220px}.card svg text{font-size:12px}
 @media(max-width:1000px){.charts{grid-template-columns:1fr}}
 @media(max-width:560px){.group-grid,.chart-group:first-child .group-grid{grid-template-columns:1fr}}
@@ -47,6 +47,23 @@
 @media print{.inspector-list{max-height:none;overflow:visible}.inspector-row{break-inside:avoid}.inspector-track{print-color-adjust:exact}}
 </style>
 <main>
+<div class="av-print-header" aria-hidden="true">
+  <i class="av-ph-lens"></i>
+  <div class="av-ph-brand">
+    <img class="av-ph-logo" src="/logo-auto-visao-branco.png" alt="">
+    <p class="av-ph-claim"><svg class="av-ph-flag" viewBox="0 0 20 14" aria-hidden="true"><rect width="20" height="14" rx="1.5" fill="#009C3B"/><path d="M10 1.6 18.2 7 10 12.4 1.8 7z" fill="#FFDF00"/><circle cx="10" cy="7" r="3.3" fill="#002776"/><path d="M6.8 6.3c2.2-.5 4.6-.2 6.4.9" stroke="#fff" stroke-width=".7" fill="none"/></svg><span>A <mark>maior</mark> rede de vistorias<br>automotivas do Brasil</span></p>
+  </div>
+  <div class="av-ph-stats">
+    <div class="av-ph-stat"><i class="av-ph-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.5 4.6 4h14.8L21 9.5"/><path d="M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M4.5 12v8h15v-8"/><path d="M10 20v-5h4v5"/></svg></i><div><b><small>+</small>240</b><span>lojas</span></div></div>
+    <div class="av-ph-stat"><i class="av-ph-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg></i><div><b><small>+</small>18</b><span>estados</span></div></div>
+    <div class="av-ph-stat"><i class="av-ph-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m8.8 14.2 2.2 2.2 4.2-4.4"/></svg></i><div><b><small>+</small>80.000</b><span>laudos/mês</span></div></div>
+  </div>
+  <div class="av-ph-report">
+    <span class="av-ph-kicker">Relatório · BI de Vendas</span>
+    <strong data-av-print-title></strong>
+    <span data-av-print-when></span>
+  </div>
+</div>
 <header class="gerencial-header">
 <nav class="view-nav" aria-label="Visões do BI">
 <a href="/">Visão Geral</a><a href="/relatorio-cliente">Visão por Cliente</a><a href="/gerencial" aria-current="page">Visão Gerencial</a><a href="/vistoriadores">Visão por Vistoriadores</a><a href="/speed">Speed Diário</a><a href="/logout" class="nav-sair">Sair</a>
@@ -157,6 +174,31 @@ function chart(title,periods,cents,line) {
   card.append(scroll);
   return card;
 }
+// Quadro de resumo do bloco, usado no PDF: totais e médias do período exibido.
+function summary(periods,series) {
+  const [revenue,price,daily]=series.map(values=>values.map(value=>value===null?null:value/100));
+  const valid=values=>values.filter(value=>value!==null);
+  const mean=values=>valid(values).length?valid(values).reduce((a,b)=>a+b,0)/valid(values).length:null;
+  const total=valid(revenue).reduce((a,b)=>a+b,0);
+  let best=-1;
+  revenue.forEach((value,i)=>{if(value!==null&&(best<0||value>revenue[best]))best=i;});
+  const label=period=>period.slice(5)+'/'+period.slice(2,4);
+  const card=node('article',undefined,'card av-summary');
+  card.append(node('h3','Resumo do período'));
+  const list=node('dl');
+  for(const [name,value,note] of [
+    ['Receita total','R$ '+compact.format(total),periods.length+(periods.length===1?' mês':' meses')],
+    ['Preço médio',mean(price)===null?'—':currency.format(mean(price)),'média dos meses'],
+    ['Venda média por dia','R$ '+compact.format(mean(daily)||0),'média dos meses'],
+    ['Melhor mês',best<0?'—':label(periods[best]),best<0?'':'R$ '+compact.format(revenue[best])],
+  ]) {
+    const item=node('div');
+    item.append(node('dt',name),node('dd',value),node('small',note));
+    list.append(item);
+  }
+  card.append(list);
+  return card;
+}
 let revision=0, initialized=false;
 function activeFilters() {
   const chips=document.querySelector('#filtros-ativos');
@@ -208,6 +250,7 @@ async function refresh() {
       const group=node('section',undefined,'chart-group '+key);
       const grid=node('div',undefined,'group-grid');
       grid.append(...indices.map(i=>chart(titles[i],data.periodos,data.graficos[i],lineCharts.has(i))));
+      grid.children[0].after(summary(data.periodos,indices.map(i=>data.graficos[i])));
       group.append(node('h2',title),grid);
       return group;
     })));
