@@ -13,6 +13,7 @@ import tempfile
 from urllib.parse import parse_qs, quote, urlsplit
 
 import acesso
+from realizado_meta import comparison_page
 
 ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("BI_PORT") or os.environ.get("PORT") or "8765")
@@ -560,6 +561,20 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(f"{destino.name} importado".encode(), "text/plain; charset=utf-8")
 
     def serve_get(self, url):
+        if url.path == "/realizado-meta":
+            if not DATABASE.is_file():
+                self.reply(b"Base de vendas ainda nao carregada.", "text/plain; charset=utf-8", 503)
+                return
+            with closing(sqlite3.connect(DATABASE.as_uri() + "?mode=ro", uri=True)) as db:
+                target_database = os.environ.get("BI_TARGET_DATABASE")
+                if target_database:
+                    target_uri = Path(target_database).resolve().as_uri() + "?mode=ro"
+                    db.execute("ATTACH DATABASE ? AS metas", (target_uri,))
+                    db.execute("CREATE TEMP VIEW meta_produto_vistoriador AS "
+                               "SELECT * FROM metas.meta_produto_vistoriador")
+                page = comparison_page(db, parse_qs(url.query))
+            self.reply(page.encode("utf-8"), "text/html; charset=utf-8")
+            return
         database = DATABASE
         if url.path in ("/api/visao", "/api/relatorio-cliente", "/api/gerencial", "/api/vistoriadores", "/api/speed"):
             maintain_calendar(database)
