@@ -13,7 +13,7 @@ import tempfile
 from urllib.parse import parse_qs, quote, urlsplit
 
 import acesso
-from realizado_meta import comparison_page
+from realizado_meta import comparison_page, validate_target_database
 
 ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("BI_PORT") or os.environ.get("PORT") or "8765")
@@ -173,10 +173,10 @@ def dashboard(db, query):
                 evolution.append([current.year, label, series, count, cents])
     target = None
     active_dimensions = [key for key in DIMENSIONS if query.get(key)]
+    target_months = [f"{end.year:04}-{month:02}" for end, _ in spans for month in months
+                     if month <= end.month]
     if not active_dimensions or active_dimensions in (["unidade"], ["vendedor"]):
         target = {"quantidade": None, "receita": None, "preco": None}
-        target_months = [f"{end.year:04}-{month:02}" for end, _ in spans for month in months
-                         if month <= end.month]
         if target_months and db.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta_mensal'"
         ).fetchone():
@@ -191,6 +191,25 @@ def dashboard(db, query):
             if count == len(target_months):
                 target = {"quantidade": quantity, "receita": revenue,
                           "preco": revenue / quantity if quantity else None}
+    if (target_months and len(query.get("unidade", [])) == 1
+            and set(active_dimensions) <= {"unidade", "servico", "grupo"}
+            and attach_targets(db)):
+        placeholders = ",".join("?" for _ in target_months)
+        unit = query["unidade"][0]
+        filters = [(DIMENSIONS[key], value) for key in ("servico", "grupo")
+                   for value in query.get(key, [])[:1]]
+        conditions = "".join(f" AND {column}=?" for column, _ in filters)
+        coverage, quantity, revenue = db.execute(
+            f"""SELECT COUNT(DISTINCT m.ano_mes), SUM(m.quantidade), SUM(m.faturamento_centavos)
+            FROM metas.meta_produto_vistoriador m
+            JOIN dim_unidade u ON u.id_erp=m.id_unidade
+            JOIN dim_servico s ON s.id_erp=m.id_servico
+            WHERE {DIMENSIONS['unidade']}=? AND m.ano_mes IN ({placeholders}){conditions}""",
+            [unit, *target_months, *(value for _, value in filters)],
+        ).fetchone()
+        if coverage == len(target_months):
+            target = {"quantidade": quantity, "receita": revenue,
+                      "preco": revenue / quantity if quantity else None}
     return {
         "anos": available_years, "opcoes": options,
         "meta": target,
@@ -436,6 +455,19 @@ def speed_report(db, query):
     return report
 
 
+def target_database_path():
+    configured = os.environ.get("BI_TARGET_DATABASE")
+    return Path(configured).resolve() if configured else DATABASE.with_name("metas.sqlite3")
+
+
+def attach_targets(db):
+    path = target_database_path()
+    if not path.is_file():
+        return False
+    db.execute("ATTACH DATABASE ? AS metas", (path.as_uri() + "?mode=ro",))
+    return True
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "BI-AutoVisao"
     sys_version = ""
@@ -521,9 +553,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_PUT(self):
         """Carga de arquivo com Authorization: Bearer BI_TOKEN_IMPORTACAO.
 
-        PUT /admin/base troca a base de vendas; PUT /admin/usuarios troca o banco de usuários.
+        Os destinos de vendas, usuários e metas são independentes.
         """
         alvos = {"/admin/base": (DATABASE, "fato_item_orcamento"),
+                 "/admin/metas": (target_database_path(), "meta_produto_vistoriador"),
                  "/admin/usuarios": (Path(ACESSO.banco_usuarios), "usuario")}
         alvo = alvos.get(urlsplit(self.path).path)
         if not alvo or not TOKEN_IMPORTACAO:
@@ -537,6 +570,11 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(411 if not size else 413)
             return
         destino, tabela = alvo
+        if tabela == "meta_produto_vistoriador" and destino.resolve() in (
+            DATABASE.resolve(), Path(ACESSO.banco_usuarios).resolve()
+        ):
+            self.send_error(500, "Destino de metas deve ser independente")
+            return
         destino.parent.mkdir(parents=True, exist_ok=True)
         fd, temp = tempfile.mkstemp(dir=destino.parent, suffix=".import")
         try:
@@ -551,7 +589,23 @@ class Handler(BaseHTTPRequestHandler):
             with closing(sqlite3.connect(Path(temp).as_uri() + "?mode=ro", uri=True)) as db:
                 if db.execute("PRAGMA quick_check").fetchone()[0] != "ok":
                     raise ValueError("base corrompida")
-                db.execute(f"SELECT COUNT(*) FROM {tabela}").fetchone()
+                if tabela == "meta_produto_vistoriador":
+                    validate_target_database(db)
+                    if not DATABASE.is_file():
+                        raise ValueError("carregue a base de vendas antes das metas")
+                    db.execute("ATTACH DATABASE ? AS vendas", (DATABASE.as_uri() + "?mode=ro",))
+                    missing = db.execute("""
+                        SELECT 1 FROM meta_produto_vistoriador m
+                        LEFT JOIN vendas.dim_unidade u ON u.id_erp=m.id_unidade
+                        LEFT JOIN vendas.dim_servico s ON s.id_erp=m.id_servico
+                        LEFT JOIN vendas.dim_vistoriador v ON v.id_erp=m.id_vistoriador
+                        WHERE u.id_erp IS NULL OR s.id_erp IS NULL OR v.id_erp IS NULL
+                        LIMIT 1
+                    """).fetchone()
+                    if missing:
+                        raise ValueError("há metas com unidades, serviços ou vistoriadores ausentes da base de vendas")
+                else:
+                    db.execute(f"SELECT COUNT(*) FROM {tabela}").fetchone()
             os.replace(temp, destino)
         except (ValueError, sqlite3.DatabaseError) as error:
             Path(temp).unlink(missing_ok=True)
@@ -566,10 +620,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(b"Base de vendas ainda nao carregada.", "text/plain; charset=utf-8", 503)
                 return
             with closing(sqlite3.connect(DATABASE.as_uri() + "?mode=ro", uri=True)) as db:
-                target_database = os.environ.get("BI_TARGET_DATABASE")
-                if target_database:
-                    target_uri = Path(target_database).resolve().as_uri() + "?mode=ro"
-                    db.execute("ATTACH DATABASE ? AS metas", (target_uri,))
+                if attach_targets(db):
                     db.execute("CREATE TEMP VIEW meta_produto_vistoriador AS "
                                "SELECT * FROM metas.meta_produto_vistoriador")
                 page = comparison_page(db, parse_qs(url.query))
