@@ -44,3 +44,25 @@ select:hover,input:hover{border-color:var(--av-gray-light)}
 .view-nav .nav-sair{margin-left:auto;color:rgba(255,255,255,.6);font-weight:500}
 .view-nav .nav-sair::before{content:"";width:8px;height:8px;margin-right:8px;border-radius:50%;background:var(--av-gray)}
 .view-nav .nav-sair:hover::before{background:var(--av-red)}
+
+/* ===== PDF: cabeçalho e rodapé de marca (só na impressão) ===== */
+.av-print-header,.av-print-footer{display:none}
+@media print{
+  @page{margin:10mm 8mm 13mm;@bottom-left{content:"Auto Visão · BI de Vendas · Uso interno e confidencial";font:500 7.5pt 'Poppins',sans-serif;color:#656565}@bottom-right{content:"Página " counter(page) " de " counter(pages);font:600 7.5pt 'Poppins',sans-serif;color:#1A1A1A}}
+  html,body{background:#fff!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  .av-print-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:7mm;margin:0 0 5mm;padding:0 0 4mm;border-bottom:1.2mm solid var(--av-red);break-inside:avoid;break-after:avoid}
+  .av-print-header .av-ph-logo{width:52mm;height:auto;display:block}
+  .av-ph-claim{padding-left:6mm;border-left:.4mm solid var(--av-line)}
+  .av-ph-claim strong{display:block;font:900 14pt/1.1 var(--av-font-title);color:var(--av-graphite)}
+  .av-ph-claim strong span{color:var(--av-red)}
+  .av-ph-stats{display:flex;gap:3mm;margin-top:2.2mm}
+  .av-ph-stats span{display:inline-flex;align-items:baseline;gap:1.5mm;padding:1.2mm 3mm;border-radius:1.6mm;background:var(--av-graphite);color:#fff;font:500 8pt var(--av-font-action);white-space:nowrap}
+  .av-ph-stats b{font:900 11pt var(--av-font-title);color:#fff}
+  .av-ph-stats .av-ph-red{background:var(--av-red)}
+  .av-ph-meta{text-align:right;font:500 8pt/1.5 var(--av-font-action);color:var(--av-gray);white-space:nowrap}
+  .av-ph-meta strong{display:block;font:900 10.5pt var(--av-font-title);color:var(--av-graphite)}
+  /* A logo do cabeçalho de marca substitui a logo da tela. */
+  .heading img,.report-heading img{display:none!important}
+  .gerencial-header,main>header{border-bottom:0!important}
+}
+@media print{.chart-group{break-inside:avoid}.chart-group>h2,.speed-section h2,section>h2{break-after:avoid}}
