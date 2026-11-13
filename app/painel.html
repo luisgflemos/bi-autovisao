@@ -52,9 +52,7 @@ button.bar:hover,button.bar[aria-pressed=true]{background:var(--av-red-soft)}.ba
 .bars[data-metric=preco]{--bar-color:var(--av-series-3);--bar-highlight:#f4f4f4}
 .bars[data-metric] .fill{background:var(--bar-color)}
 .bars[data-metric] button.bar:hover,.bars[data-metric] button.bar[aria-pressed=true]{background:var(--bar-highlight);border-bottom-color:var(--bar-color)}
-.cards:has(.target-card){grid-template-columns:repeat(4,minmax(0,1fr))}.target-card .target-value{font-size:14px;font-weight:800;margin:4px 0}.target-card .target-period{font-size:12px;color:var(--av-gray)}
-@media(max-width:1100px){.cards:has(.target-card){grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.cards:has(.target-card){grid-template-columns:1fr}}
+.cards[hidden]{display:none}
 </style>
 <div class="layout">
 <aside>
@@ -87,6 +85,7 @@ button.bar:hover,button.bar[aria-pressed=true]{background:var(--av-red-soft)}.ba
   <p id="status" role="status"></p>
   </header>
   <section class="cards" id="indicadores" aria-label="Indicadores acumulados no ano"></section>
+  <section class="cards" id="indicadores-meta" aria-label="Indicadores comparados com a meta" hidden></section>
   <section class="charts">
     <article class="panel"><div class="chart-header"><h2>Evolução de Vendas</h2><div class="chart-header"><select id="metrica-evolucao" aria-label="Indicador da evolução"><option value="receita">Receita</option><option value="quantidade">Quantidade</option></select><select form="filtros" name="evolucao" aria-label="Agrupar evolução"><option value="mes">Mês</option><option value="trimestre">Trimestre</option><option value="semestre">Semestre</option><option value="ano">Ano</option></select></div></div><div class="legend" id="legenda-evolucao"></div><div id="evolucao" class="evolution"></div></article>
     <article class="panel"><div class="chart-header"><h2>Receita</h2><select form="filtros" name="receita" aria-label="Agrupar receita"></select></div><div id="receita" class="bars"></div></article>
@@ -172,17 +171,20 @@ function populate(select, options, all) {
 function cards(data) {
   const metrics = ([count,cents]) => [cents/100,count ? cents/100/count : null,count];
   const actual=metrics(data.atual), prior=metrics(data.anterior);
-  const cards = ['Receita','Preço Médio','Quantidade'].map((name,i)=>{
-    const format=i===2 ? v=>integer.format(v) : v=>v===null?'—':money.format(v);
-    const delta=prior[i] && actual[i]!==null ? ((actual[i]/prior[i]-1)*100) : null;
-    const nominal=data.anterior[0] && actual[i]!==null ? actual[i]-prior[i] : null;
+  const names=['Receita','Preço Médio','Quantidade'];
+  const priorLabel=data.recorte?'Período anterior':data.cortes.length===1?'Até '+date(data.cortes[0][1]):'Acumulados anteriores';
+  const percent=new Intl.NumberFormat('pt-BR',{signDisplay:'exceptZero',maximumFractionDigits:1});
+  function metricCard(name,i,reference,label,detailsLabel,missing) {
+    const format=v=>v===null?'—':i===2?integer.format(v):money.format(v);
+    const delta=reference && actual[i]!==null ? ((actual[i]/reference-1)*100) : null;
+    const nominal=reference!==null && actual[i]!==null ? actual[i]-reference : null;
     const panel=element('article',undefined,'panel metric');
     const comparison=element('small',undefined,'comparison');
-    const change=delta===null?'—':new Intl.NumberFormat('pt-BR',{signDisplay:'exceptZero',maximumFractionDigits:1}).format(delta)+'%';
+    const change=delta===null?'—':percent.format(delta)+'%';
     comparison.append(element('span',change,'change '+(delta>0?'positive':delta<0?'negative':'')));
-    comparison.append(data.recorte?' · Mesmo período do ano anterior':' · YTD vs. ano anterior');
+    comparison.append(' · '+label);
     const details=element('div');
-    details.append(comparison,element('small',(data.recorte?'Período anterior':data.cortes.length===1?'Até '+date(data.cortes[0][1]):'Acumulados anteriores')+' · '+(data.anterior[0]?format(prior[i]):'sem dados')));
+    details.append(comparison,element('small',reference===null?missing:detailsLabel+' · '+format(reference)));
     const footer=element('div',undefined,'metric-footer');
     footer.append(details);
     if(nominal!==null) {
@@ -192,21 +194,21 @@ function cards(data) {
     }
     panel.append(element('h2',name),element('strong',format(actual[i])),footer);
     return panel;
-  });
-  if(data.meta) {
-    const target=element('article',undefined,'panel metric target-card');
-    target.append(element('h2','Meta'));
-    if(data.meta.quantidade===null) {
-      target.append(element('p','Meta ainda não cadastrada para o recorte.'));
-    } else {
-      target.append(element('p','Receita · '+money.format(data.meta.receita/100),'target-value'),
-        element('p','Preço Médio · '+(data.meta.preco===null?'—':money.format(data.meta.preco/100)),'target-value'),
-        element('p','Quantidade · '+integer.format(data.meta.quantidade),'target-value'),
-        element('p','Meta integral dos meses selecionados','target-period'));
-    }
-    cards.push(target);
   }
-  document.querySelector('#indicadores').replaceChildren(...cards);
+  document.querySelector('#indicadores').replaceChildren(...names.map((name,i)=>
+    metricCard(name,i,data.anterior[0]?prior[i]:null,
+      data.recorte?'Mesmo período do ano anterior':'YTD vs. ano anterior',
+      priorLabel,priorLabel+' · sem dados')));
+  const targetRow=document.querySelector('#indicadores-meta');
+  targetRow.hidden=!data.meta;
+  if (!data.meta) {
+    targetRow.replaceChildren();
+    return;
+  }
+  const targets=[data.meta.receita,data.meta.preco,data.meta.quantidade];
+  targetRow.replaceChildren(...names.map((name,i)=>
+    metricCard(name,i,targets[i]===null || i===2?targets[i]:targets[i]/100,
+      'Realizado vs. meta','Meta dos meses selecionados','Meta indisponível para o recorte.')));
 }
 function bars(id, rows, metric=id) {
   const container=document.getElementById(id);
