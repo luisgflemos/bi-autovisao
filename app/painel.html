@@ -35,6 +35,14 @@ button{cursor:pointer}button:hover{border-color:var(--av-red-deep)}
 .metric small{display:block;color:var(--av-gray)}.comparison{margin-top:6px;font-size:13px}.change{font-weight:900}.positive{color:#137547}.negative{color:var(--av-red-deep)}
 .metric-footer .nominal{display:block;margin-top:4px;text-align:center;font:900 18px var(--av-font-title);font-variant-numeric:tabular-nums}
 .chart-header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.chart-header select{width:auto}
+.panel.sales-chart{padding:10px 13px}
+.sales-chart h2{font-size:16px}
+.sales-chart :is(button,select){min-height:32px;width:auto;font-size:13px}
+.sales-chart button[aria-pressed=true]{background:#bf1515;color:white}
+.sales-chart button[data-mode=meta][aria-pressed=true]{background:#155ab5;color:white}
+.sales-chart .evolution svg{max-height:265px}
+.sales-chart .evolution svg text{font-size:11px}
+.sales-chart .legend{margin-top:8px;font-size:12px}
 .bars{max-height:325px;overflow:auto;margin-top:12px;padding:4px}
 .bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 12px;align-items:center;min-height:54px;padding:9px 8px;text-align:left;border:0;border-bottom:1px solid #ededed;border-radius:6px;font-size:14px;line-height:1.3;color:var(--av-graphite)}
 button.bar:hover,button.bar[aria-pressed=true]{background:var(--av-red-soft)}.bar strong{font-variant-numeric:tabular-nums;white-space:nowrap}.track{grid-column:1/-1;background:#eee;height:7px;border-radius:8px;overflow:hidden}.fill{display:block;height:100%;border-radius:8px;background:var(--av-red-deep)}
@@ -104,7 +112,23 @@ button.bar:hover,button.bar[aria-pressed=true]{background:var(--av-red-soft)}.ba
   <section class="cards" id="indicadores" aria-label="Indicadores acumulados no ano"></section>
   <section class="cards" id="indicadores-meta" aria-label="Indicadores comparados com a meta" hidden></section>
   <section class="charts">
-    <article class="panel"><div class="chart-header"><h2>Evolução de Vendas</h2><div class="chart-header"><select id="metrica-evolucao" aria-label="Indicador da evolução"><option value="receita">Receita</option><option value="quantidade">Quantidade</option></select><select form="filtros" name="evolucao" aria-label="Agrupar evolução"><option value="mes">Mês</option><option value="trimestre">Trimestre</option><option value="semestre">Semestre</option><option value="ano">Ano</option></select></div></div><div class="legend" id="legenda-evolucao"></div><div id="evolucao" class="evolution"></div></article>
+    <article class="panel sales-chart">
+      <div class="chart-header">
+        <div class="chart-header">
+          <h2>Acompanhamento de Vendas</h2>
+          <div class="chart-header" id="comparacao-vendas" role="group" aria-label="Comparativo de vendas">
+            <button type="button" data-mode="ytd" aria-pressed="true">YTD</button>
+            <button type="button" data-mode="meta" aria-pressed="false">Meta</button>
+          </div>
+        </div>
+        <div class="chart-header">
+          <select id="metrica-evolucao" aria-label="Indicador de vendas"><option value="receita">Receita</option><option value="quantidade">Quantidade</option><option value="preco">Preço Médio</option></select>
+          <select form="filtros" name="evolucao" aria-label="Agrupar vendas"><option value="mes">Mês</option><option value="trimestre">Trimestre</option><option value="semestre">Semestre</option><option value="ano">Ano</option></select>
+        </div>
+      </div>
+      <div class="legend" id="legenda-evolucao"></div>
+      <div id="evolucao" class="evolution"></div>
+    </article>
     <article class="panel"><div class="chart-header"><h2>Receita</h2><select form="filtros" name="receita" aria-label="Agrupar receita"></select></div><div id="receita" class="bars"></div></article>
     <article class="panel"><div class="chart-header"><h2>Quantidade</h2><select form="filtros" name="quantidade" aria-label="Agrupar quantidade"></select></div><div id="quantidade" class="bars"></div></article>
     <article class="panel"><div class="chart-header"><h2>Preço Médio</h2><select form="filtros" name="preco" aria-label="Agrupar preço médio"></select></div><div id="preco" class="bars"></div></article>
@@ -268,22 +292,32 @@ function bars(id, rows, metric=id) {
   container.replaceChildren(...(nodes.length?nodes:[element('p','Sem dados no período.')]));
 }
 let evolutionData;
+let evolutionMode='ytd';
 function evolution(data) {
   evolutionData=data;
   const container=document.querySelector('#evolucao');
-  const quantity=document.querySelector('#metrica-evolucao').value==='quantidade';
+  const metric=document.querySelector('#metrica-evolucao').value;
+  const quantity=metric==='quantidade';
+  const targetMode=evolutionMode==='meta';
   const current=new Map(),previous=new Map();
-  for(const [year,period,series,count,cents] of data.evolucao) {
-    (series?previous:current).set(year+'|'+period,quantity?count:cents/100);
+  const rows=targetMode?[...data.evolucao.filter(row=>row[2]===0),...data.evolucao_metas]:data.evolucao;
+  for(const [year,period,series,count,cents] of rows) {
+    if(metric==='preco' && !count) continue;
+    const value=quantity?count:metric==='preco'?cents/100/count:cents/100;
+    (series?previous:current).set(year+'|'+period,value);
   }
   const periods=[...new Set([...current.keys(),...previous.keys()])].sort();
-  const colors=['#BF1515','#B5B5B5'];
-  const legends=data.cortes.length===1?data.cortes[0].map(d=>d.slice(0,4)):['Ano selecionado','Ano anterior'];
+  const colors=['#BF1515',targetMode?'#155ab5':'#B5B5B5'];
+  const legends=targetMode?['Realizado','Meta']:data.cortes.length===1?data.cortes[0].map(d=>d.slice(0,4)):['Ano selecionado','Ano anterior'];
   document.querySelector('#legenda-evolucao').replaceChildren(...legends.map((label,i)=>{
     const item=element('span','■ '+label);
-    item.style.color=i===0?colors[0]:'#656565';
+    item.style.color=i===0 || targetMode?colors[i]:'#656565';
     return item;
   }));
+  if(targetMode && !previous.size) {
+    container.replaceChildren(element('p','Meta indisponível para o recorte.'));
+    return;
+  }
   if(!periods.length){container.replaceChildren(element('p','Sem dados no período.'));return;}
   function svgNode(tag,attrs,label) {
     const node=document.createElementNS('http://www.w3.org/2000/svg',tag);
@@ -292,8 +326,8 @@ function evolution(data) {
     return node;
   }
   const width=Math.max(900,periods.length*62+110);
-  const left=92,right=width-22,top=16,bottom=218;
-  const chart=svgNode('svg',{viewBox:'0 0 '+width+' 250',role:'img','aria-label':'Comparação por período entre os anos'});
+  const left=92,right=width-22,top=16,bottom=166;
+  const chart=svgNode('svg',{viewBox:'0 0 '+width+' 195',role:'img','aria-label':targetMode?'Realizado e meta por período':'Comparação por período entre os anos'});
   if(periods.length>12) chart.style.minWidth=width+'px';
   const values=[...current.values(),...previous.values()];
   const min=Math.min(...values),max=Math.max(...values);
@@ -305,7 +339,7 @@ function evolution(data) {
   for(let i=0;i<=4;i++){
     const value=low+(high-low)*i/4, line=y(value);
     chart.append(svgNode('line',{x1:left,x2:right,y1:line,y2:line,stroke:'#ddd','stroke-dasharray':'3 4'}),
-      svgNode('text',{x:left-9,y:line+4,'text-anchor':'end'},(quantity?'':'R$ ')+compact.format(value)));
+      svgNode('text',{x:left-9,y:line+4,'text-anchor':'end'},metric==='preco'?money.format(value):(quantity?'':'R$ ')+compact.format(value)));
   }
   const step=(right-left)/periods.length,barWidth=Math.min(42,step*.33);
   periods.forEach((key,i)=>{
@@ -318,12 +352,20 @@ function evolution(data) {
       if(!series.has(key)) return;
       const value=series.get(key),height=y(value);
       const bar=svgNode('rect',{x:x+(j===0?-barWidth-2:2),y:Math.min(height,baseline),width:barWidth,height:Math.max(1,Math.abs(height-baseline)),rx:3,fill:colors[j]});
-      bar.append(svgNode('title',{},name+' · '+(Number(year)-j)+' · '+format.format(value)));
+      bar.append(svgNode('title',{},name+' · '+(targetMode?year+' · '+legends[j]:Number(year)-j)+' · '+format.format(value)));
       chart.append(bar);
     });
     chart.append(svgNode('text',{x,y:bottom+21,'text-anchor':'middle'},label));
   });
   container.replaceChildren(chart);
+}
+const comparisonButtons=document.querySelectorAll('#comparacao-vendas button');
+for(const button of comparisonButtons) {
+  button.addEventListener('click',()=>{
+    evolutionMode=button.dataset.mode;
+    for(const option of comparisonButtons) option.setAttribute('aria-pressed',String(option===button));
+    if(evolutionData) evolution(evolutionData);
+  });
 }
 document.querySelector('#metrica-evolucao').addEventListener('change',()=>{
   if(evolutionData) evolution(evolutionData);
