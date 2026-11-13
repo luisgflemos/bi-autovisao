@@ -22,7 +22,7 @@ ACESSO = acesso.Acesso(banco_usuarios=DATABASE.with_name("usuarios.sqlite3"))
 TOKEN_IMPORTACAO = os.environ.get("BI_TOKEN_IMPORTACAO", "")
 LIMITE_BASE = 2 * 1024 ** 3
 # Rotas liberadas sem login: página de entrada, banner de prévia de link e recursos visuais.
-PUBLICAS = {"/login", "/logout", "/saude", "/og-banner.png", "/logo-auto-visao.png",
+PUBLICAS = {"/login", "/logout", "/saude", "/og-banner.png", "/logo-auto-visao.png", "/logo-auto-visao-branco.png",
             "/design-system.css", "/assets/fonts/fonts.css",
             *(f"/assets/fonts/auto-visao-font-{i}.ttf" for i in range(1, 7))}
 JOINS = """
@@ -597,6 +597,7 @@ class Handler(BaseHTTPRequestHandler):
             "/vistoriadores": ("gerencial.html", "text/html; charset=utf-8"),
             "/logo-auto-visao.png": ("Logo_AutoVisao_PNG.png", "image/png"),
             "/og-banner.png": ("og-banner.png", "image/png"),
+            "/logo-auto-visao-branco.png": ("logo-auto-visao-branco.png", "image/png"),
             "/filtros.js": ("filtros.js", "text/javascript; charset=utf-8"),
             "/sessao.js": ("sessao.js", "text/javascript; charset=utf-8"),
             "/design-system.css": ("design-system.css", "text/css; charset=utf-8"),

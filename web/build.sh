@@ -6,7 +6,7 @@ rm -rf dist
 mkdir -p dist/assets/fonts
 cd app
 cp painel.html gerencial.html relatorio_cliente.html design-system.css filtros.js sessao.js \
-   graficos_vistoriadores.js og-banner.png Logo_AutoVisao_PNG.png ../dist/
+   graficos_vistoriadores.js og-banner.png Logo_AutoVisao_PNG.png logo-auto-visao-branco.png ../dist/
 cp assets/fonts/*.ttf assets/fonts/fonts.css assets/fonts/*-OFL.txt ../dist/assets/fonts/
 cp Logo_AutoVisao_PNG.png ../dist/logo-auto-visao.png
 echo "Site estático pronto em dist/"
