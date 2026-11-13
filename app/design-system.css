@@ -142,3 +142,23 @@ select:hover,input:hover{border-color:var(--av-gray-light)}
   .av-summary dd{font-size:14pt!important}
 }
 @media print{.chart-group{margin-bottom:0}.chart-group .card h3{margin-bottom:1mm!important}.chart-group .group-grid{gap:3mm!important}}
+/* Cabeçalho do PDF: bandeira e números com ícones */
+@media print{
+  .av-print-header{grid-template-columns:88mm 1fr 74mm!important}
+  .av-ph-brand{padding-left:9mm!important}
+  .av-ph-logo{width:62mm!important}
+  .av-ph-claim{display:flex;align-items:center;gap:2.4mm;margin-top:3.2mm!important;font-size:9.5pt!important}
+  .av-ph-flag{flex:none;width:9mm;height:6.3mm;border-radius:.8mm;box-shadow:0 0 0 .35mm rgba(255,255,255,.85)}
+  .av-ph-stats{gap:5mm!important;justify-content:space-evenly!important;padding:0 4mm}
+  .av-ph-sep{display:none}
+  .av-ph-stat{flex-direction:row!important;align-items:center!important;gap:2.4mm}
+  .av-ph-icon{flex:none;display:grid;place-items:center;width:10.5mm;height:10.5mm;border-radius:50%;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 .35mm rgba(255,255,255,.55)}
+  .av-ph-icon svg{width:6mm;height:6mm;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .av-ph-stat b{display:block;font-size:21pt!important;line-height:1!important;white-space:nowrap}
+  .av-ph-stat b small{font-size:13pt!important;vertical-align:.3em}
+  .av-ph-stat span{display:block;margin-top:.8mm!important;font-size:7pt!important;letter-spacing:.16em!important}
+  .av-ph-lens{left:118mm!important}
+  .av-ph-report{padding:0 8mm 0 19mm!important}
+  .av-ph-report strong{font-size:13.5pt!important}
+}
+@media print{.av-ph-kicker{white-space:nowrap;letter-spacing:.14em!important;font-size:6.8pt!important}}
