@@ -76,6 +76,19 @@ button.bar:hover,button.bar[aria-pressed=true]{background:var(--av-red-soft)}.ba
 .bars[data-metric=quantidade]{--bar-color:var(--av-series-2);--bar-highlight:#f1f1f1}
 .bars[data-metric=preco]{--bar-color:var(--av-series-3);--bar-highlight:#f4f4f4}
 .bars[data-metric] .fill{background:var(--bar-color)}
+.ranking-panel{padding:10px 13px}
+.ranking-panel h2{font-size:16px}
+.ranking-panel :is(.ranking-modes button,select){width:auto;min-height:32px;font-size:13px}
+.ranking-panel .bars{margin-top:8px}
+.ranking-panel .bar{min-height:42px;padding:6px 8px;font-size:13px;gap:4px 8px}
+.ranking-panel .track{position:relative;overflow:visible}
+.ranking-modes{display:flex;gap:4px;flex-wrap:wrap}
+.ranking-modes button[aria-pressed=true]{background:#303030;color:white}
+.ranking-modes button[data-mode=meta][aria-pressed=true]{background:#155ab5}
+.ranking-reference{grid-column:1/-1;color:#555;font-size:12px}
+.ranking-reference[data-mode=meta]{color:#155ab5}
+.ranking-marker{position:absolute;top:-3px;bottom:-3px;width:3px;background:#303030;transform:translateX(-50%);border:1px solid white;box-sizing:content-box}
+.ranking-marker[data-mode=meta]{background:#155ab5}
 .bars[data-metric] button.bar:hover,.bars[data-metric] button.bar[aria-pressed=true]{background:var(--bar-highlight);border-bottom-color:var(--bar-color)}
 .cards[hidden]{display:none}
 </style>
@@ -264,13 +277,21 @@ function cards(data) {
     metricCard(name,i,targets[i]===null || i===2?targets[i]:targets[i]/100,
       'Realizado vs. meta','Meta do período','Meta indisponível para o recorte.',true)));
 }
+let rankingData;
+const rankingModes={};
 function bars(id, rows, metric=id) {
   const container=document.getElementById(id);
   container.dataset.metric=metric;
   const dimension=id==='clientes'?'cliente':form.elements[id]?.value;
   const select=dimension ? form.elements[dimension] : null;
-  const values=rows.map(([label,count,cents])=>[label,metric==='quantidade'?count:cents/100/(metric==='preco'?count:1)]).sort((a,b)=>b[1]-a[1]);
-  const max=Math.max(1,...values.map(([,v])=>Math.abs(v)));
+  const mode=rankingModes[id] || 'realizado';
+  const referenceLabel=mode==='meta'?'Meta':'Ano anterior';
+  const metricValue=([,count,cents])=>metric==='quantidade'?count:metric==='preco'?(count?cents/100/count:null):cents/100;
+  const referenceRows=mode==='realizado'?[]:rankingData['rankings_'+mode]?.[id] || [];
+  const references=new Map(referenceRows.map(row=>[row[0],metricValue(row)]));
+  const values=rows.map(row=>[row[0],metricValue(row)]).sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(1,...values.map(([name,value])=>Math.max(Math.abs(value),Math.abs(references.get(name) ?? 0))));
+  const format=metric==='quantidade'?integer:money;
   const nodes=values.map(([name,value])=>{
     const row=element(select?'button':'div',undefined,'bar');
     if(select) {
@@ -286,7 +307,20 @@ function bars(id, rows, metric=id) {
     const fill=element('span',undefined,'fill');
     fill.style.width=(100*Math.abs(value)/max)+'%';
     track.append(fill);
-    row.append(element('span',name),element('strong',(metric==='quantidade'?integer:money).format(value)),track);
+    row.append(element('span',name),element('strong',format.format(value)),track);
+    if(mode!=='realizado') {
+      const reference=references.get(name);
+      const caption=element('small',reference==null?referenceLabel+' indisponível':referenceLabel+' · '+format.format(reference),'ranking-reference');
+      caption.dataset.mode=mode;
+      row.append(caption);
+      if(reference!=null) {
+        const marker=element('span',undefined,'ranking-marker');
+        marker.dataset.mode=mode;
+        marker.style.left=(100*Math.abs(reference)/max)+'%';
+        marker.setAttribute('aria-hidden','true');
+        track.append(marker);
+      }
+    }
     return row;
   });
   container.replaceChildren(...(nodes.length?nodes:[element('p','Sem dados no período.')]));
@@ -371,8 +405,31 @@ document.querySelector('#metrica-evolucao').addEventListener('change',()=>{
   if(evolutionData) evolution(evolutionData);
 });
 const clientMetric=document.querySelector('#metrica-clientes');
-let clients=[];
-clientMetric.addEventListener('change',()=>bars('clientes',clients,clientMetric.value));
+for(const id of [...Object.keys(rankings),'clientes']) {
+  const panel=document.getElementById(id).closest('article');
+  panel.classList.add('ranking-panel');
+  const controls=element('div',undefined,'ranking-modes');
+  controls.setAttribute('role','group');
+  controls.setAttribute('aria-label','Comparativo de '+panel.querySelector('h2').textContent);
+  for(const [mode,label] of [['realizado','Realizado'],['ytd','YTD'],['meta','Meta']]) {
+    const button=element('button',label);
+    button.type='button';
+    button.dataset.mode=mode;
+    button.setAttribute('aria-pressed',String(mode==='realizado'));
+    button.addEventListener('click',()=>{
+      rankingModes[id]=mode;
+      for(const option of controls.children) option.setAttribute('aria-pressed',String(option===button));
+      if(rankingData) renderRanking(id);
+    });
+    controls.append(button);
+  }
+  panel.querySelector('h2').after(controls);
+}
+function renderRanking(id) {
+  if(id==='clientes') bars(id,rankingData.clientes,clientMetric.value);
+  else bars(id,rankingData.rankings[id]);
+}
+clientMetric.addEventListener('change',()=>{if(rankingData) renderRanking('clientes');});
 let revision=0, initialized=false;
 async function refresh() {
   syncSearchFilters(form);
@@ -395,9 +452,8 @@ async function refresh() {
     statusLine.textContent=data.cortes.length?(data.recorte?'Período selecionado · ':'YTD até ')+data.cortes.map(pair=>data.recorte?pair[0].slice(0,4):date(pair[0])).join(' · '):'Sem dados para a combinação de períodos.';
     cards(data);
     evolution(data);
-    for(const [key,rows] of Object.entries(data.rankings)) bars(key,rows);
-    clients=data.clientes;
-    bars('clientes',clients,clientMetric.value);
+    rankingData=data;
+    for(const id of [...Object.keys(rankings),'clientes']) renderRanking(id);
   } catch {
     if(current===revision) statusLine.textContent='Não foi possível carregar o painel.';
   }
