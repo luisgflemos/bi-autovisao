@@ -172,6 +172,7 @@ def dashboard(db, query):
             for label, count, cents in grouped(periods[grain], date(end.year, 1, 1), end):
                 evolution.append([current.year, label, series, count, cents])
     target = None
+    monthly_targets = {}
     active_dimensions = [key for key in DIMENSIONS if query.get(key)]
     target_months = [f"{end.year:04}-{month:02}" for end, _ in spans for month in months
                      if month <= end.month]
@@ -183,14 +184,12 @@ def dashboard(db, query):
             level = active_dimensions[0] if active_dimensions else "unidade"
             name = query[level][0] if active_dimensions else None
             condition = " AND nome=?" if name else ""
-            count, quantity, revenue = db.execute(
-                "SELECT COUNT(DISTINCT ano_mes), SUM(quantidade), SUM(quantidade*preco_medio_centavos) "
-                f"FROM meta_mensal WHERE nivel=? AND ano_mes IN ({','.join('?' for _ in target_months)}){condition}",
+            rows = db.execute(
+                "SELECT ano_mes, SUM(quantidade), SUM(quantidade*preco_medio_centavos) "
+                f"FROM meta_mensal WHERE nivel=? AND ano_mes IN ({','.join('?' for _ in target_months)}){condition} GROUP BY ano_mes",
                 [level, *target_months, *([name] if name else [])],
-            ).fetchone()
-            if count == len(target_months):
-                target = {"quantidade": quantity, "receita": revenue,
-                          "preco": revenue / quantity if quantity else None}
+            )
+            monthly_targets = {month: (quantity, revenue) for month, quantity, revenue in rows}
     if (target_months and len(query.get("unidade", [])) == 1
             and set(active_dimensions) <= {"unidade", "servico", "grupo"}
             and attach_targets(db)):
@@ -199,17 +198,39 @@ def dashboard(db, query):
         filters = [(DIMENSIONS[key], value) for key in ("servico", "grupo")
                    for value in query.get(key, [])[:1]]
         conditions = "".join(f" AND {column}=?" for column, _ in filters)
-        coverage, quantity, revenue = db.execute(
-            f"""SELECT COUNT(DISTINCT m.ano_mes), SUM(m.quantidade), SUM(m.faturamento_centavos)
+        rows = db.execute(
+            f"""SELECT m.ano_mes, SUM(m.quantidade), SUM(m.faturamento_centavos)
             FROM metas.meta_produto_vistoriador m
             JOIN dim_unidade u ON u.id_erp=m.id_unidade
             JOIN dim_servico s ON s.id_erp=m.id_servico
-            WHERE {DIMENSIONS['unidade']}=? AND m.ano_mes IN ({placeholders}){conditions}""",
+            WHERE {DIMENSIONS['unidade']}=? AND m.ano_mes IN ({placeholders}){conditions}
+            GROUP BY m.ano_mes""",
             [unit, *target_months, *(value for _, value in filters)],
-        ).fetchone()
-        if coverage == len(target_months):
-            target = {"quantidade": quantity, "receita": revenue,
-                      "preco": revenue / quantity if quantity else None}
+        )
+        detailed_targets = {month: (quantity, revenue) for month, quantity, revenue in rows}
+        if detailed_targets and (
+            all(month in detailed_targets for month in target_months)
+            or not all(month in monthly_targets for month in target_months)
+        ):
+            monthly_targets = detailed_targets
+    if target_months and all(month in monthly_targets for month in target_months):
+        quantity = sum(monthly_targets[month][0] for month in target_months)
+        revenue = sum(monthly_targets[month][1] for month in target_months)
+        target = {"quantidade": quantity, "receita": revenue,
+                  "preco": revenue / quantity if quantity else None}
+
+    target_periods = {}
+    for year_month in target_months:
+        year, month = map(int, year_month.split("-"))
+        label = {"mes": f"{month:02}", "trimestre": f"T{(month - 1) // 3 + 1}",
+                 "semestre": f"S{(month - 1) // 6 + 1}", "ano": "Ano"}[grain]
+        target_periods.setdefault((year, label), []).append(year_month)
+    evolution_targets = [
+        [year, label, 1, sum(monthly_targets[month][0] for month in period_months),
+         sum(monthly_targets[month][1] for month in period_months)]
+        for (year, label), period_months in target_periods.items()
+        if all(month in monthly_targets for month in period_months)
+    ]
     return {
         "anos": available_years, "opcoes": options,
         "meta": target,
@@ -217,6 +238,7 @@ def dashboard(db, query):
         "recorte": any(query.get(key) for key in ("mes", "trimestre", "semestre")),
         "cortes": [[current.isoformat(), prior.isoformat()] for current, prior in spans],
         "evolucao": evolution,
+        "evolucao_metas": evolution_targets,
         "rankings": {key: ranking(DIMENSIONS[value]) for key, value in rankings.items()},
         "clientes": ranking(DIMENSIONS["cliente"]),
     }
