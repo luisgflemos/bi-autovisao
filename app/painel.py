@@ -87,7 +87,7 @@ def maintain_calendar(path):
             db.executemany("INSERT OR IGNORE INTO dim_calendario_campinas VALUES (?,?,?)", rows)
 
 
-def dashboard(db, query):
+def sales_joins(db):
     detailed_clients = attach_targets(db) and db.execute(
         "SELECT 1 FROM metas.sqlite_master WHERE type='table' AND name='meta_cliente'"
     ).fetchone()
@@ -101,6 +101,11 @@ def dashboard(db, query):
                CASE WHEN carteira.id_cliente IS NOT NULL THEN carteira.id_vendedor
                     ELSE f.id_vendedor END"""
         )
+    return joins, detailed_clients
+
+
+def dashboard(db, query):
+    joins, detailed_clients = sales_joins(db)
     first, latest = db.execute(
         "SELECT MIN(data_emissao), MAX(data_emissao) FROM fato_item_orcamento"
     ).fetchone()
@@ -399,6 +404,7 @@ def portfolio_summary(activity, historical_days, current_days, full_days):
 
 
 def customer_report(db, query):
+    joins, _ = sales_joins(db)
     first, last = db.execute("SELECT MIN(data_emissao), MAX(data_emissao) FROM fato_item_orcamento").fetchone()
     end = date.fromisoformat(query.get("fim", [last])[0])
     if not first <= end.isoformat() <= last:
@@ -411,7 +417,7 @@ def customer_report(db, query):
         previous.insert(0, month.isoformat()[:7])
 
     dimensions = {key: DIMENSIONS[key] for key in ("vendedor", "unidade")}
-    options = {key: [row[0] for row in db.execute(f"SELECT DISTINCT {column} {JOINS} ORDER BY 1")]
+    options = {key: [row[0] for row in db.execute(f"SELECT DISTINCT {column} {joins} ORDER BY 1")]
                for key, column in dimensions.items()}
     selected = {key: query.get(key, [""])[0] for key in dimensions}
     if all(selected.values()):
@@ -420,7 +426,7 @@ def customer_report(db, query):
     params = [month.isoformat(), end.isoformat(), *(value for value in selected.values() if value)]
     rows = db.execute(
         f"SELECT {DIMENSIONS['cliente']}, CASE WHEN f.data_emissao >= ? THEN f.data_emissao "
-        f"ELSE substr(f.data_emissao,1,7) END, {MEASURES} {JOINS} "
+        f"ELSE substr(f.data_emissao,1,7) END, {MEASURES} {joins} "
         f"WHERE f.data_emissao BETWEEN ? AND ?{filters} GROUP BY 1,2",
         [start.isoformat(), *params],
     ).fetchall()
@@ -479,6 +485,7 @@ def customer_report(db, query):
 
 
 def management_report(db, query, inspectors=False, cutoff=None):
+    joins, _ = sales_joins(db)
     first, last = db.execute("SELECT MIN(data_emissao), MAX(data_emissao) FROM fato_item_orcamento").fetchone()
     available_years = list(range(int(first[:4]), int(last[:4]) + 1))
     raw_years = query.get("ano", [available_years[-1]])
@@ -487,7 +494,7 @@ def management_report(db, query, inspectors=False, cutoff=None):
     if any(year not in available_years for year in years) or any(not 1 <= month <= 12 for month in months):
         raise ValueError("Recorte inválido.")
     dimensions = {key: DIMENSIONS[key] for key in ("unidade", "vendedor", "grupo", "segmento", "cliente")}
-    options = {key: [row[0] for row in db.execute(f"SELECT DISTINCT {column} {JOINS} ORDER BY 1")]
+    options = {key: [row[0] for row in db.execute(f"SELECT DISTINCT {column} {joins} ORDER BY 1")]
                for key, column in dimensions.items()}
     selected = {key: query[key][0] for key in dimensions if query.get(key)}
     if any(value not in options[key] for key, value in selected.items()):
@@ -507,7 +514,7 @@ def management_report(db, query, inspectors=False, cutoff=None):
     if inspectors:
         rows = db.execute(
             f"SELECT COALESCE(NULLIF(TRIM(i.nome), ''), 'Sem informação'), "
-            f"{DIMENSIONS['grupo']}, f.vistoria_movel, {MEASURES} {JOINS} "
+            f"{DIMENSIONS['grupo']}, f.vistoria_movel, {MEASURES} {joins} "
             f"WHERE f.data_emissao BETWEEN ? AND ?{condition} "
             f"AND substr(f.data_emissao,1,7) IN ({','.join('?' for _ in periods)}) GROUP BY 1,2,3",
             (*args, *periods),
@@ -524,7 +531,7 @@ def management_report(db, query, inspectors=False, cutoff=None):
                     totals.items(), key=lambda item: (-item[1][6], item[0].casefold())
                 )]}
     rows = db.execute(
-        f"SELECT substr(f.data_emissao,1,7), {DIMENSIONS['grupo']}, {MEASURES} {JOINS} "
+        f"SELECT substr(f.data_emissao,1,7), {DIMENSIONS['grupo']}, {MEASURES} {joins} "
         f"WHERE f.data_emissao BETWEEN ? AND ?{condition} GROUP BY 1,2", args,
     )
     groups = {(period, group): (count, value) for period, group, count, value in rows}
@@ -551,6 +558,7 @@ def management_report(db, query, inspectors=False, cutoff=None):
 
 
 def speed_report(db, query):
+    joins, _ = sales_joins(db)
     report = customer_report(db, query)
     end = report["fim"]
     start = end[:7] + "-01"
@@ -561,7 +569,7 @@ def speed_report(db, query):
     selected = {key: value for key, value in report["filtros"].items() if value}
     condition = "".join(f" AND {DIMENSIONS[key]}=?" for key in selected)
     groups = {group: (count, cents) for group, count, cents in db.execute(
-        f"SELECT {DIMENSIONS['grupo']}, {MEASURES} {JOINS} "
+        f"SELECT {DIMENSIONS['grupo']}, {MEASURES} {joins} "
         f"WHERE f.data_emissao BETWEEN ? AND ?{condition} GROUP BY 1",
         (start, end, *selected.values()),
     )}
@@ -582,6 +590,11 @@ def speed_report(db, query):
     }
     filters = {key: [value] for key, value in selected.items()}
     filters.update(ano=[end[:4]], mes=[end[5:7]])
+    target = dashboard(db, filters)["meta"]
+    report["speed"]["metas"] = (
+        [target["quantidade"], target["preco"], target["receita"]]
+        if target else [None, None, None]
+    )
     report["vistoriadores"] = management_report(db, filters, inspectors=True, cutoff=end)["vistoriadores"]
     return report
 
