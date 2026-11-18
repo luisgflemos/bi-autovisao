@@ -92,9 +92,9 @@ def comparison_page(db, query, can_import=False):
     </nav><h1>Realizado × Meta</h1>"""
     if can_import:
         header += """<details><summary>Importar metas</summary>
-        <p>Envie um arquivo SQLite com o conjunto completo de metas. A importação substitui as metas cadastradas.</p>
+        <p>Envie um arquivo SQLite, ou SQLite compactado em gzip, com o conjunto completo de metas. A importação substitui as metas cadastradas.</p>
         <form id="importar-metas">
-          <label>Arquivo de metas <input type="file" accept=".sqlite3,.sqlite,.db" required></label>
+          <label>Arquivo de metas <input type="file" accept=".sqlite3,.sqlite,.db,.gz" required></label>
           <button>Importar metas</button>
         </form>
         <p id="resultado-importacao" role="status"></p>

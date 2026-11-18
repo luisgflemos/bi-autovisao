@@ -1,4 +1,5 @@
 import calendar
+import gzip
 import json
 import os
 import sqlite3
@@ -290,11 +291,16 @@ def dashboard(db, query):
             LEFT JOIN dim_vistoriador i ON i.id_erp=m.id_vistoriador
         """
         # Cobertura é conferida antes dos filtros de carteira para distinguir zero de ausência.
+        unit_conditions = " OR ".join("f.data_emissao BETWEEN ? AND ?" for _ in spans)
+        unit_values = [value for end, _ in spans for value in (f"{end.year}-01-01", end.isoformat())]
+        unit_filter = " AND " + DIMENSIONS["unidade"] + "=?" if query.get("unidade") else ""
         units = [row[0] for row in db.execute(
             f"SELECT DISTINCT {DIMENSIONS['unidade']} {joins} "
-            + ("WHERE " + DIMENSIONS["unidade"] + "=?" if query.get("unidade") else ""),
-            query.get("unidade", [])[:1],
+            f"WHERE ({unit_conditions or '0'}){unit_filter}",
+            [*unit_values, *query.get("unidade", [])[:1]],
         )]
+        if query.get("unidade"):
+            units = query["unidade"][:1]
         coverage = set(db.execute(
             f"SELECT DISTINCT {DIMENSIONS['unidade']}, m.ano_mes "
             "FROM metas.meta_produto_vistoriador m JOIN dim_unidade u ON u.id_erp=m.id_unidade"
@@ -727,6 +733,20 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError("upload interrompido")
                     out.write(chunk)
                     remaining -= len(chunk)
+            with open(temp, "rb") as uploaded:
+                compressed = uploaded.read(2) == b"\x1f\x8b"
+            if compressed and tabela == "meta_produto_vistoriador":
+                with gzip.open(temp, "rb") as uploaded, tempfile.TemporaryFile(dir=destino.parent) as expanded:
+                    total = 0
+                    while chunk := uploaded.read(1 << 20):
+                        total += len(chunk)
+                        if total > 128 * 1024 ** 2:
+                            raise ValueError("base descompactada excede 128 MB")
+                        expanded.write(chunk)
+                    expanded.seek(0)
+                    with open(temp, "wb") as out:
+                        while chunk := expanded.read(1 << 20):
+                            out.write(chunk)
             with closing(sqlite3.connect(Path(temp).as_uri() + "?mode=ro", uri=True)) as db:
                 db.execute("PRAGMA trusted_schema=OFF")
                 if db.execute("PRAGMA quick_check").fetchone()[0] != "ok":
@@ -760,7 +780,7 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     db.execute(f"SELECT COUNT(*) FROM {tabela}").fetchone()
             os.replace(temp, destino)
-        except (ValueError, sqlite3.DatabaseError) as error:
+        except (ValueError, OSError, EOFError, sqlite3.DatabaseError) as error:
             Path(temp).unlink(missing_ok=True)
             self.reply(f"falha: {error}".encode(), "text/plain; charset=utf-8", 400)
             return
