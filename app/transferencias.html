@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Importação e Exportação | Auto Visão</title>
+<link rel="stylesheet" href="/design-system.css">
+<style>
+*{box-sizing:border-box}body{margin:0}main{padding:24px}h1{margin:16px 0}.transfer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.transfer-card{background:white;border:1px solid var(--av-line);border-radius:12px;padding:18px;min-width:0}.transfer-card h2{font-size:20px;margin:0 0 12px}.transfer-card form{display:grid;gap:12px}.transfer-card input,.transfer-card button{padding:10px;min-height:42px;border:1px solid var(--av-line);border-radius:8px;max-width:100%;background:white}.transfer-card button{cursor:pointer;font-weight:800}.transfer-card button.primary{background:var(--av-red);color:white;border-color:var(--av-red)}.transfer-card button:disabled{opacity:.6;cursor:wait}.transfer-card label{display:grid;gap:6px}.transfer-card p{color:var(--av-gray);font-size:14px}.transfer-card ul{padding-left:20px;font-size:14px;line-height:1.8}.transfer-card .result{white-space:pre-wrap;color:var(--av-graphite);font-size:14px}.transfer-card details{margin-top:18px}progress{width:100%;height:14px}.audit{margin-top:20px;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--av-line);white-space:nowrap}th{background:#eee}.download{display:inline-block;margin:12px 0;font-weight:800;color:#155ab5}@media(max-width:820px){main{padding:14px}.transfer-grid{grid-template-columns:1fr}}
+</style>
+<main>
+<nav class="view-nav" aria-label="Visões do BI">
+  <a href="/">Visão Geral</a><a href="/relatorio-cliente">Visão por Cliente</a>
+  <a href="/gerencial">Visão Gerencial</a><a href="/vistoriadores">Visão por Vistoriadores</a>
+  <a href="/speed">Speed Diário</a><a href="/transferencias" aria-current="page">Importação e Exportação</a>
+  <a href="/logout" class="nav-sair">Sair</a>
+</nav>
+<h1>Importação e Exportação</h1>
+<div class="transfer-grid">
+  <section class="transfer-card" id="importacao" hidden>
+    <h2>Importar realizado</h2>
+    <p>Selecione a planilha .xlsx da consulta 1.1 - Consulta Pedidos Completo do ERP. Os pedidos serão conferidos antes de atualizar a base.</p>
+    <form id="form-realizado">
+      <label>Arquivo do ERP <input type="file" accept=".xlsx,.json" required></label>
+      <button class="primary">Conferir e importar</button>
+    </form>
+    <p id="resultado-importacao" class="result" role="status"></p>
+    <details>
+      <summary>Importar metas</summary>
+      <p>Envie a base completa de metas em SQLite ou gzip.</p>
+      <form id="form-metas"><input type="file" accept=".sqlite3,.sqlite,.db,.gz" required aria-label="Arquivo de metas"><button>Importar metas</button></form>
+      <p id="resultado-metas" class="result" role="status"></p>
+    </details>
+  </section>
+  <section class="transfer-card">
+    <h2>Exportar relatórios</h2>
+    <p id="periodo-exportacao">Consultando a última data disponível…</p>
+    <ul>
+      <li>Visão por Cliente de cada vendedor com vendas no período</li>
+      <li>Visão Gerencial e Visão por Vistoriadores sem filtros</li>
+      <li>Speed Diário de cada unidade com vendas e um consolidado total</li>
+    </ul>
+    <p>Os PDFs de clientes e Speed incluem o resumo executivo expandido. Todos os arquivos serão reunidos em um ZIP.</p>
+    <button class="primary" id="gerar" disabled>Gerar pacote de relatórios</button>
+    <p id="resultado-exportacao" class="result" role="status"></p>
+    <progress id="progresso" hidden value="0" max="1"></progress>
+    <a id="baixar" class="download" hidden>Baixar relatórios em ZIP</a>
+  </section>
+</div>
+<section class="transfer-card audit" id="historico" hidden>
+  <h2>Histórico de cargas do realizado</h2>
+  <table><thead><tr><th>Data da carga</th><th>Período do arquivo</th><th>Inseridos</th><th>Atualizados</th><th>Inalterados</th><th>Substituídos</th><th>Auditoria</th></tr></thead><tbody id="cargas"></tbody></table>
+</section>
+</main>
+<script src="/sessao.js"></script>
+<script>
+const date=value=>value.split('-').reverse().join('/');
+const generate=document.querySelector('#gerar');
+const exportStatus=document.querySelector('#resultado-exportacao');
+const progress=document.querySelector('#progresso');
+const download=document.querySelector('#baixar');
+async function metadata(){
+  const response=await fetch('/api/transferencias');
+  if(!response.ok)throw Error('Não foi possível consultar os dados.');
+  const data=await response.json();
+  document.querySelector('#importacao').hidden=!data.administrador;
+  document.querySelector('#periodo-exportacao').textContent='Carteiras e Speed de '+date(data.inicio)+' a '+date(data.corte)+'. '+data.total+' PDFs previstos.';
+  generate.disabled=false;
+  if(data.administrador)await history();
+}
+async function history(){
+  const response=await fetch('/api/cargas-realizado');
+  if(!response.ok)return;
+  const rows=await response.json();
+  const body=document.querySelector('#cargas');body.replaceChildren();
+  for(const row of rows){
+    const tr=body.insertRow();
+    for(const value of [new Date(row.criado_em).toLocaleString('pt-BR'),date(row.inicio)+' a '+date(row.fim),row.inseridos,row.atualizados,row.inalterados,row.substituidos]){
+      const td=tr.insertCell();td.textContent=value;
+    }
+    const link=document.createElement('a');link.textContent='Baixar CSV';link.href='/api/cargas-realizado/'+row.hash;link.download='Auditoria_'+row.fim.replaceAll('-','')+'_'+row.hash.slice(0,8)+'.csv';tr.insertCell().append(link);
+  }
+  document.querySelector('#historico').hidden=false;
+}
+for(const [formId,endpoint,statusId] of [['form-realizado','/api/importar-realizado','resultado-importacao'],['form-metas','/api/importar-metas','resultado-metas']]){
+  document.getElementById(formId).addEventListener('submit',async event=>{
+    event.preventDefault();const form=event.currentTarget,button=form.querySelector('button');
+    const status=document.getElementById(statusId),file=form.querySelector('input').files[0];
+    button.disabled=true;status.textContent='Conferindo e importando…';
+    try{
+      const response=await fetch(endpoint,{method:'PUT',headers:{'Content-Type':file.name.toLowerCase().endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/octet-stream'},body:file});
+      if(!response.ok)throw Error(await response.text());
+      if(formId==='form-realizado'){
+        const data=await response.json();
+        status.textContent=(data.reprocessamento?'Arquivo já processado.':'Carga concluída com backup e auditoria.')+'\nInseridos: '+data.inseridos+' · Atualizados: '+data.atualizados+' · Inalterados: '+data.inalterados+' · Substituídos: '+data.substituidos+'\nÚltimo realizado: '+date(data.ultima_data);
+      }else status.textContent='Metas importadas.';
+      await metadata();
+    }catch(error){status.textContent='Falha na importação: '+error.message;}finally{button.disabled=false;}
+  });
+}
+async function followJob(id){
+  try{
+    const response=await fetch('/api/exportacoes/'+id);
+    if(!response.ok)throw Error('Não foi possível acompanhar a geração. Gere um novo pacote.');
+    const job=await response.json();
+    progress.hidden=false;progress.max=job.total||1;progress.value=job.concluidos;
+    exportStatus.textContent=job.estado==='preparando'?'Preparando a base dos relatórios…':'Gerando '+job.concluidos+' de '+job.total+(job.atual?' · '+job.atual:'');
+    if(job.estado==='concluido'){
+      download.href='/api/exportacoes/'+id+'/arquivo';download.textContent='Baixar '+job.arquivo;download.hidden=false;
+      exportStatus.textContent=job.total+' PDFs concluídos.';generate.disabled=false;localStorage.removeItem('bi-exportacao');
+    }else if(job.estado==='erro')throw Error(job.erro);
+    else setTimeout(()=>followJob(id),2000);
+  }catch(error){exportStatus.textContent=error.message;generate.disabled=false;localStorage.removeItem('bi-exportacao');}
+}
+generate.addEventListener('click',async()=>{
+  generate.disabled=true;download.hidden=true;exportStatus.textContent='Iniciando a geração…';
+  try{
+    const response=await fetch('/api/exportacoes',{method:'POST'});
+    if(!response.ok)throw Error(await response.text());
+    const job=await response.json();localStorage.setItem('bi-exportacao',job.id);followJob(job.id);
+  }catch(error){exportStatus.textContent=error.message;generate.disabled=false;}
+});
+metadata().then(()=>{const job=localStorage.getItem('bi-exportacao');if(job){generate.disabled=true;followJob(job);}}).catch(error=>{exportStatus.textContent=error.message;});
+</script>
+</html>

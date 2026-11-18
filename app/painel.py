@@ -1,5 +1,7 @@
 import calendar
 import gzip
+import csv
+import io
 import json
 import os
 import sqlite3
@@ -16,6 +18,8 @@ from urllib.parse import parse_qs, quote, urlsplit
 import acesso
 from realizado_meta import comparison_page, validate_target_database
 from carga_realizado import import_actuals
+from ler_exportacao_erp import workbook_payload
+from exportar_relatorios import EXPORTS, report_plan
 
 ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("BI_PORT") or os.environ.get("PORT") or "8765")
@@ -680,6 +684,19 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         url = urlsplit(self.path)
+        if url.path == '/api/exportacoes':
+            user = ACESSO.usuario_da_sessao(self.headers.get('Cookie')) if ACESSO.ativo else 'local'
+            if not user or self.headers.get('Sec-Fetch-Site') != 'same-origin':
+                self.send_error(403)
+                return
+            try:
+                maintain_calendar(DATABASE)
+                job = EXPORTS.start(user, DATABASE, target_database_path(),
+                                    f'http://127.0.0.1:{self.server.server_port}', sys.modules[__name__])
+                self.reply(json.dumps(job, ensure_ascii=False).encode(), 'application/json; charset=utf-8', 202)
+            except (ValueError, OSError, sqlite3.DatabaseError) as error:
+                self.reply(str(error).encode(), 'text/plain; charset=utf-8', 400)
+            return
         if url.path != "/login" or not ACESSO.ativo:
             self.send_error(404)
             return
@@ -715,7 +732,8 @@ class Handler(BaseHTTPRequestHandler):
                 body = self.rfile.read(size)
                 if len(body) != size:
                     raise ValueError('envio incompleto')
-                result = import_actuals(DATABASE, json.loads(body))
+                payload = workbook_payload(body) if body.startswith(b'PK') else json.loads(body)
+                result = import_actuals(DATABASE, payload)
                 maintain_calendar(DATABASE)
                 self.reply(json.dumps(result, ensure_ascii=False).encode(), 'application/json; charset=utf-8')
             except (ValueError, KeyError, TypeError, sqlite3.DatabaseError, OSError) as error:
@@ -820,6 +838,71 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(f"{destino.name} importado".encode(), "text/plain; charset=utf-8")
 
     def serve_get(self, url):
+        if url.path == '/transferencias':
+            self.reply((ROOT / 'transferencias.html').read_bytes(), 'text/html; charset=utf-8')
+            return
+        if url.path == '/api/transferencias':
+            with closing(sqlite3.connect(DATABASE.as_uri() + '?mode=ro', uri=True)) as db:
+                joins, _ = sales_joins(db)
+                plan = report_plan(db, joins, DIMENSIONS)
+            plan['total'] = len(plan['relatorios'])
+            plan['administrador'] = bool(ACESSO.administrador_da_sessao(self.headers.get('Cookie')))
+            self.reply(json.dumps(plan, ensure_ascii=False).encode(), 'application/json; charset=utf-8')
+            return
+        if url.path.startswith('/api/exportacoes/'):
+            parts = url.path.strip('/').split('/')
+            user = ACESSO.usuario_da_sessao(self.headers.get('Cookie')) if ACESSO.ativo else 'local'
+            if len(parts) == 3:
+                job = EXPORTS.get(parts[2], user)
+                if job:
+                    self.reply(json.dumps(job, ensure_ascii=False).encode(), 'application/json; charset=utf-8')
+                    return
+            elif len(parts) == 4 and parts[3] == 'arquivo':
+                archive = EXPORTS.archive(parts[2], user)
+                if archive:
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/zip')
+                    self.send_header('Content-Disposition', f'attachment; filename="{archive.name}"')
+                    self.send_header('Content-Length', str(archive.stat().st_size))
+                    self.send_header('Cache-Control', 'no-store')
+                    self.security_headers()
+                    self.end_headers()
+                    if self.command != 'HEAD':
+                        with archive.open('rb') as stream:
+                            while chunk := stream.read(1 << 20):
+                                self.wfile.write(chunk)
+                    return
+            self.send_error(404)
+            return
+        if url.path == '/api/cargas-realizado' or url.path.startswith('/api/cargas-realizado/'):
+            if not ACESSO.administrador_da_sessao(self.headers.get('Cookie')):
+                self.send_error(403)
+                return
+            with closing(sqlite3.connect(DATABASE.as_uri() + '?mode=ro', uri=True)) as db:
+                exists = db.execute("SELECT 1 FROM sqlite_master WHERE name='carga_realizado' AND type='table'").fetchone()
+                if url.path == '/api/cargas-realizado':
+                    rows = db.execute('SELECT hash,criado_em,resultado FROM carga_realizado ORDER BY criado_em DESC LIMIT 20').fetchall() if exists else []
+                    self.reply(json.dumps([{**json.loads(result), 'hash': digest, 'criado_em': created}
+                                           for digest, created, result in rows], ensure_ascii=False).encode(),
+                               'application/json; charset=utf-8')
+                    return
+                digest = url.path.rsplit('/', 1)[-1]
+                if exists and db.execute('SELECT 1 FROM carga_realizado WHERE hash=?', (digest,)).fetchone():
+                    output = io.StringIO()
+                    writer = csv.writer(output, delimiter=';')
+                    writer.writerow(['Item', 'Pedido', 'Operação', 'Campo', 'Antes', 'Depois'])
+                    for identifier, operation, old, new in db.execute(
+                        'SELECT id_item,operacao,antes,depois FROM carga_realizado_auditoria WHERE carga_hash=?', (digest,)
+                    ):
+                        before, after = json.loads(old) if old else {}, json.loads(new) if new else {}
+                        for key in sorted(before.keys() | after.keys()):
+                            if before.get(key) != after.get(key):
+                                writer.writerow([identifier, after.get('numero_orcamento') or before.get('numero_orcamento'),
+                                                 operation, key, before.get(key), after.get(key)])
+                    self.reply(output.getvalue().encode('utf-8-sig'), 'text/csv; charset=utf-8')
+                    return
+            self.send_error(404)
+            return
         if url.path == "/realizado-meta":
             if not DATABASE.is_file():
                 self.reply(b"Base de vendas ainda nao carregada.", "text/plain; charset=utf-8", 503)

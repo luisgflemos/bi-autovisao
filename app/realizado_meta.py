@@ -88,75 +88,8 @@ def comparison_page(db, query, can_import=False):
     td:first-child,th:first-child{text-align:left}thead{background:#252525;color:white}
     tbody tr:nth-child(even){background:#f4f4f4}tbody tr:first-child{font-weight:bold;background:#fbe8e8}
     </style></head><body><main><nav class="view-nav" aria-label="Visões do BI">
-    <a href="/">Visão Geral</a><a href="/realizado-meta" aria-current="page">Realizado × Meta</a>
+    <a href="/">Visão Geral</a><a href="/realizado-meta" aria-current="page">Realizado × Meta</a><a href="/transferencias">Importação e Exportação</a>
     </nav><h1>Realizado × Meta</h1>"""
-    if can_import:
-        header += """<details><summary>Importar metas</summary>
-        <p>Envie um arquivo SQLite, ou SQLite compactado em gzip, com o conjunto completo de metas. A importação substitui as metas cadastradas.</p>
-        <form id="importar-metas">
-          <label>Arquivo de metas <input type="file" accept=".sqlite3,.sqlite,.db,.gz" required></label>
-          <button>Importar metas</button>
-        </form>
-        <p id="resultado-importacao" role="status"></p>
-        <script>
-        document.querySelector('#importar-metas').addEventListener('submit', async (event) => {
-          event.preventDefault();
-          const form = event.currentTarget;
-          const button = form.querySelector('button');
-          const status = document.querySelector('#resultado-importacao');
-          button.disabled = true;
-          status.textContent = 'Validando e importando…';
-          try {
-            const response = await fetch('/api/importar-metas', {
-              method: 'PUT',
-              headers: {'Content-Type': 'application/octet-stream'},
-              body: form.querySelector('input').files[0]
-            });
-            if (response.ok) {
-              status.textContent = 'Metas importadas.';
-              window.location.reload();
-            } else if (response.status === 400) {
-              status.textContent = await response.text();
-            } else {
-              status.textContent = 'Importação recusada. Confira sua sessão e o tamanho do arquivo (até 32 MB).';
-            }
-          } catch {
-            status.textContent = 'Falha na conexão. Confira o comparativo antes de tentar novamente.';
-          } finally {
-            button.disabled = false;
-          }
-        });
-        </script></details>
-        <details><summary>Atualizar realizado</summary>
-        <p>Envie o arquivo JSON preparado a partir da exportação do ERP para conciliar os pedidos e incorporar os novos serviços.</p>
-        <form id="importar-realizado">
-          <label>Arquivo de realizado <input type="file" accept=".json" required></label>
-          <button>Atualizar realizado</button>
-        </form>
-        <pre id="resultado-realizado" role="status" style="white-space:pre-wrap"></pre>
-        <script>
-        document.querySelector('#importar-realizado').addEventListener('submit', async event => {
-          event.preventDefault();
-          const form=event.currentTarget, button=form.querySelector('button');
-          const status=document.querySelector('#resultado-realizado');
-          button.disabled=true;
-          status.textContent='Conferindo e atualizando os registros…';
-          try {
-            const response=await fetch('/api/importar-realizado', {
-              method:'PUT',headers:{'Content-Type':'application/json'},
-              body:form.querySelector('input').files[0]
-            });
-            if(!response.ok) throw Error(await response.text());
-            const result=await response.json();
-            status.textContent=(result.reprocessamento?'Arquivo já processado.':'Carga concluída.')+
-              '\\nInseridos: '+result.inseridos+' · Atualizados: '+result.atualizados+
-              ' · Inalterados: '+result.inalterados+' · Substituídos: '+result.substituidos+
-              '\\nÚltimo realizado: '+result.ultima_data;
-          } catch(error) {
-            status.textContent='Falha na atualização: '+error.message;
-          } finally { button.disabled=false; }
-        });
-        </script></details>"""
     footer = "</main></body></html>"
     exists = db.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta_produto_vistoriador' "
