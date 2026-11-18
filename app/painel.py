@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, quote, urlsplit
 
 import acesso
 from realizado_meta import comparison_page, validate_target_database
+from carga_realizado import import_actuals
 
 ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("BI_PORT") or os.environ.get("PORT") or "8765")
@@ -701,6 +702,25 @@ class Handler(BaseHTTPRequestHandler):
 
         Os destinos de vendas, usuários e metas são independentes.
         """
+        if urlsplit(self.path).path == '/api/importar-realizado':
+            admin = ACESSO.administrador_da_sessao(self.headers.get('Cookie'))
+            if not admin or self.headers.get('Sec-Fetch-Site') != 'same-origin':
+                self.send_error(403)
+                return
+            size = int(self.headers.get('Content-Length') or 0)
+            if not 0 < size <= 32 * 1024 ** 2:
+                self.send_error(413)
+                return
+            try:
+                body = self.rfile.read(size)
+                if len(body) != size:
+                    raise ValueError('envio incompleto')
+                result = import_actuals(DATABASE, json.loads(body))
+                maintain_calendar(DATABASE)
+                self.reply(json.dumps(result, ensure_ascii=False).encode(), 'application/json; charset=utf-8')
+            except (ValueError, KeyError, TypeError, sqlite3.DatabaseError, OSError) as error:
+                self.reply(str(error).encode(), 'text/plain; charset=utf-8', 400)
+            return
         alvos = {"/admin/base": (DATABASE, "fato_item_orcamento"),
                  "/admin/metas": (target_database_path(), "meta_produto_vistoriador"),
                  "/admin/usuarios": (Path(ACESSO.banco_usuarios), "usuario")}
