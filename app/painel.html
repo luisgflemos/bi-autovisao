@@ -91,6 +91,11 @@ button.bar:hover,button.bar[aria-pressed=true]{background:var(--av-red-soft)}.ba
 .ranking-marker:is([data-mode=ytd],[data-mode=meta]){top:50%;bottom:auto;width:15px;height:15px;border-radius:50%;transform:translate(-50%,-50%);border-color:#ffffffd9;background:#65656580}
 .ranking-marker:is([data-mode=ytd],[data-mode=meta]).positive{background:#13754799}
 .ranking-marker:is([data-mode=ytd],[data-mode=meta]).negative{background:#b7121899}
+.ranking-marker[data-mode=meta]{background:#65656580}
+.ranking-marker[data-mode=meta].positive,.ranking-marker[data-mode=meta].achieved{background:#155ab599}
+.ranking-marker[data-mode=meta].negative{background:#65656580}
+.ranking-reference[data-mode=meta] .ranking-delta{color:#656565}
+.ranking-reference[data-mode=meta] .ranking-delta.positive,.ranking-reference[data-mode=meta] .ranking-delta.achieved{color:#155ab5}
 .ranking-delta{font-weight:800}
 .bars[data-metric] button.bar:hover,.bars[data-metric] button.bar[aria-pressed=true]{background:var(--bar-highlight);border-bottom-color:var(--bar-color)}
 .cards[hidden]{display:none}
@@ -326,7 +331,7 @@ function bars(id, rows, metric=id) {
         marker.dataset.mode=mode;
         if(mode==='ytd' || mode==='meta') {
           const delta=value-reference;
-          const direction=delta>0?'positive':delta<0?'negative':'';
+          const direction=mode==='meta' && delta===0?'achieved':delta>0?'positive':delta<0?'negative':'';
           if(direction) marker.classList.add(direction);
           const percent=reference===0?'': ' ('+signedPercent.format(delta/Math.abs(reference))+')';
           caption.append(element('span',' · '+signedFormat.format(delta)+percent,'ranking-delta '+direction));
