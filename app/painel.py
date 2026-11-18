@@ -508,7 +508,6 @@ def management_report(db, query, inspectors=False, cutoff=None):
         rows = db.execute(
             f"SELECT COALESCE(NULLIF(TRIM(i.nome), ''), 'Sem informação'), "
             f"{DIMENSIONS['grupo']}, f.vistoria_movel, {MEASURES} {JOINS} "
-            "LEFT JOIN dim_vistoriador i ON i.id_erp=f.id_vistoriador "
             f"WHERE f.data_emissao BETWEEN ? AND ?{condition} "
             f"AND substr(f.data_emissao,1,7) IN ({','.join('?' for _ in periods)}) GROUP BY 1,2,3",
             (*args, *periods),
