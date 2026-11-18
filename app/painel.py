@@ -32,6 +32,7 @@ JOIN dim_unidade u ON u.id_erp=f.id_unidade
 JOIN dim_servico s ON s.id_erp=f.id_servico
 LEFT JOIN dim_vendedor v ON v.id_erp=f.id_vendedor
 LEFT JOIN dim_cliente c ON c.id_erp=f.id_cliente
+LEFT JOIN dim_vistoriador i ON i.id_erp=f.id_vistoriador
 """
 DIMENSIONS = {
     "unidade": "CASE WHEN TRIM(u.nome) IN ('', 'Sem unidade na exportacao') "
@@ -42,6 +43,7 @@ DIMENSIONS = {
              "WHEN LOWER(s.nome) LIKE '%transfer%ncia%' THEN 'Transferência' ELSE 'Outros' END",
     "segmento": "COALESCE(NULLIF(TRIM(c.segmento), ''), 'Sem informação')",
     "cliente": "COALESCE(NULLIF(TRIM(c.nome_fantasia), ''), 'Sem informação')",
+    "vistoriador": "COALESCE(NULLIF(TRIM(i.nome), ''), 'Sem informação')",
 }
 MEASURES = "COUNT(*), COALESCE(SUM(f.valor_liquido_centavos),0)"
 
@@ -85,6 +87,19 @@ def maintain_calendar(path):
 
 
 def dashboard(db, query):
+    detailed_clients = attach_targets(db) and db.execute(
+        "SELECT 1 FROM metas.sqlite_master WHERE type='table' AND name='meta_cliente'"
+    ).fetchone()
+    joins = JOINS
+    if detailed_clients:
+        joins = JOINS.replace(
+            "LEFT JOIN dim_vendedor v ON v.id_erp=f.id_vendedor",
+            """LEFT JOIN metas.meta_cliente_vendedor carteira
+               ON carteira.id_cliente=COALESCE(f.id_cliente,'')
+            LEFT JOIN dim_vendedor v ON v.id_erp=
+               CASE WHEN carteira.id_cliente IS NOT NULL THEN carteira.id_vendedor
+                    ELSE f.id_vendedor END"""
+        )
     first, latest = db.execute(
         "SELECT MIN(data_emissao), MAX(data_emissao) FROM fato_item_orcamento"
     ).fetchone()
@@ -123,7 +138,7 @@ def dashboard(db, query):
 
     def metrics(start, end):
         return db.execute(
-            f"SELECT {MEASURES} {JOINS} {predicate} AND CAST(substr(f.data_emissao,6,2) AS INTEGER) "
+            f"SELECT {MEASURES} {joins} {predicate} AND CAST(substr(f.data_emissao,6,2) AS INTEGER) "
             f"IN ({','.join('?' for _ in months)})",
             [start, end, *values, *months],
         ).fetchone()
@@ -131,7 +146,7 @@ def dashboard(db, query):
     def grouped(column, start, end):
         return db.execute(
             f"SELECT COALESCE({column}, 'Sem informação'), {MEASURES} "
-            f"{JOINS} {predicate} AND CAST(substr(f.data_emissao,6,2) AS INTEGER) "
+            f"{joins} {predicate} AND CAST(substr(f.data_emissao,6,2) AS INTEGER) "
             f"IN ({','.join('?' for _ in months)}) GROUP BY 1",
             [start, end, *values, *months],
         ).fetchall()
@@ -153,7 +168,7 @@ def dashboard(db, query):
         key: query.get(key, [default])[0]
         for key, default in (("receita", "vendedor"), ("quantidade", "unidade"), ("preco", "servico"))
     }
-    if any(value not in ("servico", "grupo", "vendedor", "unidade", "segmento") for value in rankings.values()):
+    if any(value not in DIMENSIONS for value in rankings.values()):
         raise ValueError("Dimensão de ranking inválida.")
     grain = query.get("evolucao", ["mes"])[0]
     periods = {
@@ -165,7 +180,7 @@ def dashboard(db, query):
     if grain not in periods:
         raise ValueError("Agrupamento inválido.")
     options = {key: [row[0] for row in db.execute(
-        f"SELECT DISTINCT {column} {JOINS} WHERE {column} IS NOT NULL AND {column} <> '' ORDER BY 1"
+        f"SELECT DISTINCT {column} {joins} WHERE {column} IS NOT NULL AND {column} <> '' ORDER BY 1"
     )] for key, column in DIMENSIONS.items()}
     evolution = []
     for current, prior in spans:
@@ -265,6 +280,59 @@ def dashboard(db, query):
                         by_name = {name: (count, cents) for name, count, cents in [*rows, *detailed]}
                         rows = [[name, *amounts] for name, amounts in by_name.items()]
             ranking_targets[key] = rows
+    if detailed_clients:
+        target_joins = """
+            FROM metas.meta_cliente m
+            JOIN dim_unidade u ON u.id_erp=m.id_unidade
+            JOIN dim_servico s ON s.id_erp=m.id_servico
+            LEFT JOIN dim_cliente c ON c.id_erp=NULLIF(m.id_cliente,'')
+            LEFT JOIN dim_vendedor v ON v.id_erp=m.id_vendedor
+            LEFT JOIN dim_vistoriador i ON i.id_erp=m.id_vistoriador
+        """
+        # Cobertura é conferida antes dos filtros de carteira para distinguir zero de ausência.
+        units = [row[0] for row in db.execute(
+            f"SELECT DISTINCT {DIMENSIONS['unidade']} {joins} "
+            + ("WHERE " + DIMENSIONS["unidade"] + "=?" if query.get("unidade") else ""),
+            query.get("unidade", [])[:1],
+        )]
+        coverage = set(db.execute(
+            f"SELECT DISTINCT {DIMENSIONS['unidade']}, m.ano_mes "
+            "FROM metas.meta_produto_vistoriador m JOIN dim_unidade u ON u.id_erp=m.id_unidade"
+        ))
+        covered = bool(units and target_months) and all(
+            (unit, month) in coverage for unit in units for month in target_months
+        )
+        target = {"quantidade": None, "receita": None, "preco": None}
+        evolution_targets = []
+        ranking_targets = {key: [] for key in ranking_dimensions}
+        if covered:
+            placeholders = ",".join("?" for _ in target_months)
+            conditions = "".join(f" AND {column}=?" for column, _ in filters)
+            target_where = f" WHERE m.ano_mes IN ({placeholders}){conditions}"
+            parameters = [*target_months, *values]
+            monthly = {month: (quantity / 1000000, revenue) for month, quantity, revenue in db.execute(
+                f"SELECT m.ano_mes,SUM(m.quantidade_milionesimos),SUM(m.faturamento_centavos) "
+                f"{target_joins}{target_where} GROUP BY 1", parameters
+            )}
+            quantity = sum(row[0] for row in monthly.values())
+            revenue = sum(row[1] for row in monthly.values())
+            target = {"quantidade": quantity, "receita": revenue,
+                      "preco": revenue / quantity if quantity else None}
+            evolution_targets = [
+                [year, label, 1, sum(monthly.get(month, (0, 0))[0] for month in period_months),
+                 sum(monthly.get(month, (0, 0))[1] for month in period_months)]
+                for (year, label), period_months in target_periods.items()
+            ]
+            for key, dimension in ranking_dimensions.items():
+                rows = db.execute(
+                    f"SELECT {DIMENSIONS[dimension]},SUM(m.quantidade_milionesimos)/1000000.0,"
+                    f"SUM(m.faturamento_centavos) {target_joins}{target_where} GROUP BY 1",
+                    parameters,
+                ).fetchall()
+                by_name = {name: (quantity, revenue) for name, quantity, revenue in rows}
+                for name, _, _ in ranking(DIMENSIONS[dimension]):
+                    by_name.setdefault(name, (0, 0))
+                ranking_targets[key] = [[name, *amounts] for name, amounts in by_name.items()]
     return {
         "anos": available_years, "opcoes": options,
         "meta": target,
@@ -519,6 +587,8 @@ def target_database_path():
 
 
 def attach_targets(db):
+    if any(row[1] == "metas" for row in db.execute("PRAGMA database_list")):
+        return True
     path = target_database_path()
     if not path.is_file():
         return False
@@ -637,7 +707,7 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             self.send_error(400)
             return
-        if not 0 < size <= (4 * 1024 ** 2 if admin else LIMITE_BASE):
+        if not 0 < size <= (32 * 1024 ** 2 if admin else LIMITE_BASE):
             self.send_error(411 if not size else 413)
             return
         destino, tabela = alvo
@@ -676,6 +746,17 @@ class Handler(BaseHTTPRequestHandler):
                     """).fetchone()
                     if missing:
                         raise ValueError("há metas com unidades, serviços ou vistoriadores ausentes da base de vendas")
+                    if db.execute("SELECT 1 FROM sqlite_master WHERE name='meta_cliente' AND type='table'").fetchone():
+                        missing = db.execute("""
+                            SELECT 1 FROM meta_cliente m
+                            LEFT JOIN vendas.dim_cliente c ON c.id_erp=m.id_cliente
+                            LEFT JOIN vendas.dim_vendedor v ON v.id_erp=m.id_vendedor
+                            WHERE (m.id_cliente<>'' AND c.id_erp IS NULL)
+                               OR (m.id_vendedor IS NOT NULL AND v.id_erp IS NULL)
+                            LIMIT 1
+                        """).fetchone()
+                        if missing:
+                            raise ValueError("cliente ou vendedor ausente na base de vendas")
                 else:
                     db.execute(f"SELECT COUNT(*) FROM {tabela}").fetchone()
             os.replace(temp, destino)
