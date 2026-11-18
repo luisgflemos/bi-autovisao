@@ -22,6 +22,50 @@ def validate_target_database(db):
         seen.add(key)
     if not seen:
         raise ValueError("arquivo de metas vazio")
+    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta_cliente'").fetchone():
+        invalid = db.execute("""
+            SELECT 1 FROM meta_cliente
+            WHERE typeof(quantidade_milionesimos)<>'integer' OR quantidade_milionesimos<=0
+               OR typeof(faturamento_centavos)<>'integer' OR faturamento_centavos<0
+            LIMIT 1
+        """).fetchone()
+        if invalid:
+            raise ValueError("rateio por cliente inválido")
+        duplicates = db.execute("""
+            SELECT 1 FROM meta_cliente
+            GROUP BY ano_mes,id_unidade,id_servico,id_vistoriador,id_cliente
+            HAVING COUNT(*)>1
+            UNION ALL
+            SELECT 1 FROM meta_cliente_vendedor GROUP BY id_cliente HAVING COUNT(*)>1
+            LIMIT 1
+        """).fetchone()
+        if duplicates:
+            raise ValueError("cliente duplicado na distribuição ou no vínculo de vendedor")
+        mismatch = db.execute("""
+            WITH original AS (
+                SELECT ano_mes,id_unidade,id_servico,id_vistoriador,
+                       quantidade*1000000 q,faturamento_centavos r
+                FROM meta_produto_vistoriador
+            ), detail AS (
+                SELECT ano_mes,id_unidade,id_servico,id_vistoriador,
+                       SUM(quantidade_milionesimos) q,SUM(faturamento_centavos) r
+                FROM meta_cliente GROUP BY 1,2,3,4
+            )
+            SELECT * FROM (SELECT * FROM original EXCEPT SELECT * FROM detail)
+            UNION ALL
+            SELECT * FROM (SELECT * FROM detail EXCEPT SELECT * FROM original)
+            LIMIT 1
+        """).fetchone()
+        if mismatch:
+            raise ValueError("rateio por cliente não reconcilia com a meta original")
+        inconsistent = db.execute("""
+            SELECT 1 FROM meta_cliente m LEFT JOIN meta_cliente_vendedor v
+            ON v.id_cliente=m.id_cliente
+            WHERE v.id_cliente IS NULL OR m.id_vendedor IS NOT v.id_vendedor
+            LIMIT 1
+        """).fetchone()
+        if inconsistent:
+            raise ValueError("vendedor do cliente inconsistente")
 
 
 def format_number(value, money=False):
@@ -29,7 +73,7 @@ def format_number(value, money=False):
         return "—"
     if money:
         return "R$ " + f"{value / 100:,.2f}".translate(str.maketrans(",.", ".,"))
-    return f"{value:,}".replace(",", ".")
+    return f"{value:,.3f}".rstrip("0").rstrip(".").translate(str.maketrans(",.", ".,"))
 
 
 def comparison_page(db, query, can_import=False):
@@ -74,7 +118,7 @@ def comparison_page(db, query, can_import=False):
             } else if (response.status === 400) {
               status.textContent = await response.text();
             } else {
-              status.textContent = 'Importação recusada. Confira sua sessão e o tamanho do arquivo (até 4 MB).';
+              status.textContent = 'Importação recusada. Confira sua sessão e o tamanho do arquivo (até 32 MB).';
             }
           } catch {
             status.textContent = 'Falha na conexão. Confira o comparativo antes de tentar novamente.';
@@ -114,12 +158,50 @@ def comparison_page(db, query, can_import=False):
         LEFT JOIN dim_vistoriador i ON i.id_erp=f.id_vistoriador
         WHERE f.id_unidade=? AND f.data_emissao>=? AND f.data_emissao<=? GROUP BY 1, 2""",
         (unit, month + "-01", month + "-31")).fetchall()
+    client_detail = db.execute(
+        "SELECT 1 FROM metas.sqlite_master WHERE type='table' AND name='meta_cliente'"
+    ).fetchone() if any(row[1] == "metas" for row in db.execute("PRAGMA database_list")) else None
+    if client_detail:
+        targets = db.execute("""
+            SELECT s.nome,i.nome,m.quantidade_milionesimos/1000000.0,m.faturamento_centavos,
+                   COALESCE(NULLIF(TRIM(c.nome_fantasia),''),'Sem informação'),
+                   COALESCE(NULLIF(TRIM(v.nome),''),'Corporativo'),
+                   COALESCE(NULLIF(TRIM(c.segmento),''),'Sem informação')
+            FROM metas.meta_cliente m
+            JOIN dim_servico s ON s.id_erp=m.id_servico
+            JOIN dim_vistoriador i ON i.id_erp=m.id_vistoriador
+            LEFT JOIN dim_cliente c ON c.id_erp=NULLIF(m.id_cliente,'')
+            LEFT JOIN dim_vendedor v ON v.id_erp=m.id_vendedor
+            WHERE m.id_unidade=? AND m.ano_mes=?
+        """, (unit, month)).fetchall()
+        actuals = db.execute("""
+            SELECT s.nome,COALESCE(NULLIF(TRIM(i.nome),''),'Sem informação'),
+                   COUNT(*),SUM(f.valor_liquido_centavos),
+                   COALESCE(NULLIF(TRIM(c.nome_fantasia),''),'Sem informação'),
+                   COALESCE(NULLIF(TRIM(v.nome),''),'Corporativo'),
+                   COALESCE(NULLIF(TRIM(c.segmento),''),'Sem informação')
+            FROM fato_item_orcamento f JOIN dim_servico s ON s.id_erp=f.id_servico
+            LEFT JOIN dim_vistoriador i ON i.id_erp=f.id_vistoriador
+            LEFT JOIN dim_cliente c ON c.id_erp=f.id_cliente
+            LEFT JOIN metas.meta_cliente_vendedor carteira ON carteira.id_cliente=COALESCE(f.id_cliente,'')
+            LEFT JOIN dim_vendedor v ON v.id_erp=CASE WHEN carteira.id_cliente IS NOT NULL
+                THEN carteira.id_vendedor ELSE f.id_vendedor END
+            WHERE f.id_unidade=? AND f.data_emissao>=? AND f.data_emissao<=?
+            GROUP BY 1,2,5,6,7
+        """, (unit, month + "-01", month + "-31")).fetchall()
     products = sorted({row[0] for row in targets + actuals}, key=str.casefold)
     inspectors = sorted({row[1] for row in targets + actuals}, key=str.casefold)
     product = query.get("produto", [""])[0]
     inspector = query.get("vistoriador", [""])[0]
     grouping = query.get("agrupar", ["produto"])[0]
-    grouping = grouping if grouping in ("produto", "vistoriador") else "produto"
+    groupings = [("produto", "Produto"), ("vistoriador", "Vistoriador")]
+    if client_detail:
+        groupings.extend([("cliente", "Cliente"), ("vendedor", "Vendedor"), ("segmento", "Segmento")])
+    grouping = grouping if grouping in dict(groupings) else "produto"
+    client_filters = {}
+    for position, key in ((4, "cliente"), (5, "vendedor"), (6, "segmento")):
+        if client_detail:
+            client_filters[key] = (position, query.get(key, [""])[0])
 
     def select(key, label, options, chosen):
         tags = []
@@ -133,15 +215,22 @@ def comparison_page(db, query, can_import=False):
         select("mes", "Mês", [(m, m[5:7] + "/" + m[:4]) for m in months], month),
         select("produto", "Produto", [("", "Todos"), *((p, p) for p in products)], product),
         select("vistoriador", "Vistoriador", [("", "Todos"), *((i, i) for i in inspectors)], inspector),
-        select("agrupar", "Agrupar por", [("produto", "Produto"), ("vistoriador", "Vistoriador")], grouping),
+        *(select(key, dict(groupings)[key], [("", "Todos"), *((value, value) for value in sorted(
+            {row[position] for row in targets + actuals}
+        ))], chosen) for key, (position, chosen) in client_filters.items()),
+        select("agrupar", "Agrupar por", groupings, grouping),
     ))
 
     def aggregate(rows):
         result = defaultdict(lambda: [0, 0])
-        for service, person, qty, cents in rows:
+        for row in rows:
+            service, person, qty, cents = row[:4]
             if (product and service != product) or (inspector and person != inspector):
                 continue
-            key = service if grouping == "produto" else person
+            if any(chosen and row[position] != chosen for position, chosen in client_filters.values()):
+                continue
+            position = {"produto": 0, "vistoriador": 1, "cliente": 4, "vendedor": 5, "segmento": 6}[grouping]
+            key = row[position]
             result[key][0] += qty
             result[key][1] += cents
         return result
@@ -166,10 +255,13 @@ def comparison_page(db, query, can_import=False):
     rows = cells("Total do recorte", total(actual) if actual else empty_actual, total(target))
     for key in sorted(actual.keys() | target.keys(), key=str.casefold):
         rows += cells(key, actual.get(key, empty_actual), target.get(key, (None, None)))
-    label = "Produto" if grouping == "produto" else "Vistoriador"
+    label = dict(groupings)[grouping]
     status = f"Último realizado disponível em {last_date[8:10]}/{last_date[5:7]}/{last_date[:4]}." if last_date else ""
+    allocation_note = ("Meta proporcional ao histórico por produto. Realizado e meta por vendedor "
+                       "usam o último vínculo observado do cliente; quantidades rateadas podem ser fracionadas."
+                       if client_detail else "Meta rateada pela equipe estimada da unidade.")
     return header + f"""<form>{filters}<button>Aplicar filtros</button></form>
-    <p>{status} Meta rateada pela equipe estimada da unidade.</p>
+    <p>{status} {allocation_note}</p>
     <div class="comparison"><table><thead>
     <tr><th rowspan="2">{label}</th><th colspan="2">Quantidade</th>
     <th colspan="2">Faturamento</th><th colspan="2">Preço Médio</th></tr>

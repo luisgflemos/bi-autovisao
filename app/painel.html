@@ -109,6 +109,7 @@ button.bar:hover,button.bar[aria-pressed=true]{background:var(--av-red-soft)}.ba
     <label>Produto / Serviço<select name="servico"></select></label>
     <label>Grupo de produto<select name="grupo"></select></label>
     <label>Vendedor<select name="vendedor"></select></label>
+    <label>Vistoriador<select name="vistoriador"></select></label>
     <label>Segmento<select name="segmento"></select></label>
     <label>Cliente<select name="cliente"></select></label>
     <button type="reset">Limpar filtros</button>
@@ -181,7 +182,7 @@ function timeOptions(key, labels, checked) {
 timeOptions('semestre',[[1,'S1'],[2,'S2']]);
 timeOptions('trimestre',Array.from({length:4},(_,i)=>[i+1,'T'+(i+1)]));
 timeOptions('mes',Array.from({length:12},(_,i)=>[i+1,months.format(new Date(Date.UTC(2026,i,1))).slice(0,3)]));
-const dimensions={servico:'Produto / Serviço',grupo:'Grupo de produto',vendedor:'Vendedor',unidade:'Unidade',segmento:'Segmento'};
+const dimensions={servico:'Produto / Serviço',grupo:'Grupo de produto',vendedor:'Vendedor',unidade:'Unidade',segmento:'Segmento',cliente:'Cliente',vistoriador:'Vistoriador'};
 const rankings={receita:'vendedor',quantidade:'unidade',preco:'servico'};
 for(const [metric,initial] of Object.entries(rankings)) {
   for(const [key,label] of Object.entries(dimensions)) {
@@ -293,7 +294,9 @@ function bars(id, rows, metric=id) {
   const metricValue=([,count,cents])=>metric==='quantidade'?count:metric==='preco'?(count?cents/100/count:null):cents/100;
   const referenceRows=mode==='realizado'?[]:rankingData['rankings_'+mode]?.[id] || [];
   const references=new Map(referenceRows.map(row=>[row[0],metricValue(row)]));
-  const values=rows.map(row=>[row[0],metricValue(row)]).sort((a,b)=>b[1]-a[1]);
+  const currentRows=new Map(rows.map(row=>[row[0],metricValue(row)]));
+  if(mode==='meta') for(const name of references.keys()) if(!currentRows.has(name)) currentRows.set(name,0);
+  const values=[...currentRows].sort((a,b)=>b[1]-a[1]);
   const max=Math.max(1,...values.map(([name,value])=>Math.max(Math.abs(value),Math.abs(references.get(name) ?? 0))));
   const format=metric==='quantidade'?integer:money;
   const signedFormat=new Intl.NumberFormat('pt-BR',{...format.resolvedOptions(),signDisplay:'exceptZero'});
