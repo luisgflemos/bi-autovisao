@@ -50,6 +50,12 @@
 @media print{.inspector-list{max-height:none;overflow:visible}.inspector-row{break-inside:avoid}.inspector-track{print-color-adjust:exact}}
 .speed-section{margin:12px 0}.speed-section h2{font-size:20px;border-left:4px solid var(--av-red);padding-left:8px}.speed-table{overflow:auto;background:white;border:1px solid var(--av-line);border-radius:10px}.speed-table th,.speed-table td{text-align:center;border-right:1px solid #ddd}.speed-table th:first-child{text-align:left}.speed-table thead th{background:var(--av-graphite);color:white}.speed-table .speed-divider{border-left:3px solid var(--av-red)}.speed-table tbody th{background:#f4f4f4}.speed-section .card{background:white;border:1px solid var(--av-line);border-top:3px solid var(--av-red-deep);border-radius:10px;padding:12px;min-width:0}.speed-section h3{font-size:16px;margin:0}.speed-mode main{height:auto;display:block}.speed-mode .matrix{max-height:70vh}.speed-caption{font-size:13px;color:var(--av-gray)}
 @media print{.speed-mode .matrix{max-height:none}.speed-section h2{break-after:avoid}.speed-table{overflow:visible}}
+.speed-table .speed-goal{border-left:3px solid #155ab5}
+.speed-table .speed-variation{min-width:190px;font-weight:800}
+.speed-variation small{display:block;font-size:11px;font-weight:600}
+.speed-variation.achieved{color:#137547;background:#e5f4eb}
+.speed-variation.below{color:#b71218;background:#fce9eb}
+@media print{.speed-variation{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 @media print{.trend span{print-color-adjust:exact;-webkit-print-color-adjust:exact;border:1px solid currentColor;white-space:nowrap}}
 </style>
 <main>
@@ -212,7 +218,7 @@ function renderSpeed(data) {
   const table=document.querySelector('#speed-indicadores');
   table.replaceChildren();
   const head=table.createTHead().insertRow();
-  const headers=['Indicador','Transferência','Cautelar','Outros','Total até a data','Speed Transf.','Speed Cautelar','Speed mês'];
+  const headers=['Indicador','Transferência','Cautelar','Outros','Total até a data','Speed Transf.','Speed Cautelar','Speed mês','Meta do Mês','Variação para Meta'];
   headers.forEach((label,i)=>{cell(head,'th',label,[4,5,7].includes(i)?'speed-divider':'').scope='col';});
   const body=table.createTBody();
   for(const [index,title] of ['Quantidade','Preço Médio','Faturamento'].entries()) {
@@ -222,6 +228,22 @@ function renderSpeed(data) {
       const text=value===null?'—':index===0?integer.format(value):currency.format(value/100);
       cell(row,'td',text,[3,4,6].includes(i)?'speed-divider':'');
     });
+    const target=summary.metas?.[index] ?? null;
+    const projected=summary.linhas[index][6];
+    const format=value=>index===0?integer.format(value):currency.format(value/100);
+    cell(row,'td',target===null?'—':format(target),'speed-goal');
+    const variation=cell(row,'td','', 'speed-variation');
+    if(target===null || projected===null) {
+      variation.textContent=target===null?'Meta indisponível':'Projeção indisponível';
+    } else {
+      const delta=projected-target;
+      const achieved=delta>=0;
+      variation.classList.add(achieved?'achieved':'below');
+      const sign=delta>0?'+':delta<0?'−':'';
+      const percent=target===0?'': ' ('+new Intl.NumberFormat('pt-BR',{style:'percent',maximumFractionDigits:1,signDisplay:'exceptZero'}).format(delta/Math.abs(target))+')';
+      variation.textContent=sign+format(Math.abs(delta))+percent;
+      cell(variation,'small',(achieved?'✓ Atingindo a meta':'▼ Abaixo da meta'));
+    }
   }
   document.querySelector('#speed-dias').textContent='Início em '+date(summary.inicio)+' · '+summary.dias+' de '+summary.diasMes+' dias úteis';
   document.querySelector('#speed-vistoriadores .inspector-grid').replaceChildren(...inspectorCharts(data.vistoriadores));
