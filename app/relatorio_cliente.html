@@ -43,6 +43,8 @@
 @media screen and (min-width:821px) and (min-height:550px){.executive[open]{max-height:32vh;overflow:auto}}
 @media(max-width:820px){.executive-grid{grid-template-columns:1fr}}
 @media print{.executive-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.executive-card{break-inside:avoid}}
+.exec-delta{font-weight:800}
+@media print{.exec-delta{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 
 .searchable-filter{min-width:0;max-width:100%;width:100%;min-height:40px;padding:6px 9px;border:1px solid var(--av-line);border-radius:8px;background:white;color:var(--av-black)}
 .inspector-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.inspector-grid .card{border-top:3px solid var(--av-red-deep)}.inspector-list{max-height:350px;overflow:auto}.inspector-row{padding:6px 2px;border-bottom:1px solid #eee;font-size:13px}.inspector-label{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px}.inspector-track{display:flex;height:9px;border-radius:8px;overflow:hidden;background:#eee}.inspector-legend{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0;font-size:12px}.inspector-legend span{display:inline-flex;align-items:center;gap:4px}.inspector-legend i{width:9px;height:9px;border-radius:2px}
@@ -151,12 +153,13 @@ function executiveSummary(data) {
     return;
   }
   const signed=(value,format)=> (value>0?'+':value<0?'−':'')+format(Math.abs(value));
+  const changeClass=value=>'exec-delta '+(value>0?'exec-up':value<0?'exec-down':'');
   const money=cents=>currency.format(cents/100);
   const quantity=value=>integer.format(value)+' serviços';
   const grid=cell(content,'div','','executive-grid');
   for(const [title,current,baseline,format,drivers,isPrice] of [
-    ['Quantidade',data.quantidade,data.esperado,quantity,data.volume,false],
     ['Receita',data.receita,data.receitaEsperada,money,data.receitas,false],
+    ['Quantidade',data.quantidade,data.esperado,quantity,data.volume,false],
     ['Preço Médio',data.preco,data.precoAnterior,money,data.precos,true],
   ]) {
     const card=cell(grid,'section','','executive-card');
@@ -165,7 +168,9 @@ function executiveSummary(data) {
       cell(card,'p','Sem vendas no mês de referência.');
       continue;
     }
-    cell(card,'p',(isPrice?'PM do Speed: ':'Speed mês: ')+format(current)+' vs. '+format(baseline)+' de referência ('+signed(current-baseline,format)+')');
+    const comparison=cell(card,'p',(isPrice?'PM do Speed: ':'Speed mês: ')+format(current)+' vs. '+format(baseline)+' de referência (');
+    cell(comparison,'strong',signed(current-baseline,format),changeClass(current-baseline));
+    comparison.append(')');
     for(const [key,heading] of [['altas','Maiores contribuições de alta'],['quedas','Maiores contribuições de queda']]) {
       if(!drivers[key].length) continue;
       cell(card,'strong',heading,key==='altas'?'exec-up':'exec-down');
@@ -174,7 +179,9 @@ function executiveSummary(data) {
         const detail=isPrice
           ? ' · PM do cliente '+(expected===null?'—':money(expected))+' → '+(actual===null?'—':money(actual))
           : ' · Speed '+format(actual)+' vs. '+format(expected)+' de referência';
-        cell(list,'li',name+' · '+signed(impact,format)+detail);
+        const item=cell(list,'li',name+' · ');
+        cell(item,'strong',signed(impact,format),changeClass(impact));
+        item.append(detail);
       }
     }
   }
