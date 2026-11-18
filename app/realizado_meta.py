@@ -126,6 +126,36 @@ def comparison_page(db, query, can_import=False):
             button.disabled = false;
           }
         });
+        </script></details>
+        <details><summary>Atualizar realizado</summary>
+        <p>Envie o arquivo JSON preparado a partir da exportação do ERP para conciliar os pedidos e incorporar os novos serviços.</p>
+        <form id="importar-realizado">
+          <label>Arquivo de realizado <input type="file" accept=".json" required></label>
+          <button>Atualizar realizado</button>
+        </form>
+        <pre id="resultado-realizado" role="status" style="white-space:pre-wrap"></pre>
+        <script>
+        document.querySelector('#importar-realizado').addEventListener('submit', async event => {
+          event.preventDefault();
+          const form=event.currentTarget, button=form.querySelector('button');
+          const status=document.querySelector('#resultado-realizado');
+          button.disabled=true;
+          status.textContent='Conferindo e atualizando os registros…';
+          try {
+            const response=await fetch('/api/importar-realizado', {
+              method:'PUT',headers:{'Content-Type':'application/json'},
+              body:form.querySelector('input').files[0]
+            });
+            if(!response.ok) throw Error(await response.text());
+            const result=await response.json();
+            status.textContent=(result.reprocessamento?'Arquivo já processado.':'Carga concluída.')+
+              '\\nInseridos: '+result.inseridos+' · Atualizados: '+result.atualizados+
+              ' · Inalterados: '+result.inalterados+' · Substituídos: '+result.substituidos+
+              '\\nÚltimo realizado: '+result.ultima_data;
+          } catch(error) {
+            status.textContent='Falha na atualização: '+error.message;
+          } finally { button.disabled=false; }
+        });
         </script></details>"""
     footer = "</main></body></html>"
     exists = db.execute(
